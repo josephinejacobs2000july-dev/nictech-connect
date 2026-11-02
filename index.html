@@ -190,6 +190,16 @@ textarea{min-height:96px;resize:vertical}
 .post-head strong{font-size:1rem}
 .post .meta{font-size:.82rem;color:var(--muted)}
 .post p{white-space:pre-wrap;overflow-wrap:anywhere}
+.photo-pick{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.photo-pick label.btn{margin:0;font-weight:700}
+.sr-file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.thumbs:empty{display:none}
+.thumb{position:relative;width:76px;height:76px;border-radius:8px;overflow:hidden;background:var(--surface-2);border:1px solid var(--line);flex:none}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;line-height:1;font-size:14px}
+.post .thumbs a{display:block}
+.post .thumb{width:92px;height:92px}
 .tag{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--surface-2)}
 .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .filters select{width:auto;min-width:160px}
@@ -407,6 +417,15 @@ textarea{min-height:96px;resize:vertical}
       <div class="field"><label for="p-work">Work done</label><textarea id="p-work" required placeholder="What you did today"></textarea></div>
       <div class="field"><label for="p-mat">Parts / materials used</label><input id="p-mat" type="text" placeholder="e.g. 2 capacitors, R410A refrigerant"></div>
       <div class="field"><label for="p-next">Next step</label><input id="p-next" type="text" placeholder="e.g. Return Thursday to fit compressor"></div>
+      <div class="field" id="photoField" hidden>
+        <label for="p-photos">Photos of the work</label>
+        <div class="photo-pick">
+          <label class="btn btn-ghost btn-sm" for="p-photos"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Take or add photos</label>
+          <input id="p-photos" type="file" accept="image/*" capture="environment" multiple class="sr-file">
+          <span class="hint" id="photoHint">Up to 6. Before and after shots work best.</span>
+        </div>
+        <div class="thumbs" id="photoPreview"></div>
+      </div>
       <p id="postErr" class="notice" hidden></p>
       <button class="btn btn-primary" type="submit" id="postBtn">Post update</button>
     </form>
@@ -635,7 +654,7 @@ const reqFromRow = x => ({ id:x.id, org:x.org, clientType:x.client_type||"", ser
   email:x.email||"", po:x.po||"", status:x.status, tech:x.tech||"", scheduledDate:x.scheduled_date||"", officeNote:x.office_note||"",
   rating:x.rating||0, createdAt:Date.parse(x.created_at), updatedAt:Date.parse(x.updated_at),
   invoiceAmount: x.invoice_amount==null ? "" : Number(x.invoice_amount), invoiceCurrency:x.invoice_currency||"USD", paid:!!x.paid });
-const updFromRow = x => ({ _id:x.id, tech:x.tech, service:x.service, status:x.status, site:x.site, ref:x.ref||"", hours:Number(x.hours)||0,
+const updFromRow = x => ({ _id:x.id, photos:x.photos||[], tech:x.tech, service:x.service, status:x.status, site:x.site, ref:x.ref||"", hours:Number(x.hours)||0,
   work:x.work, materials:x.materials||"", next:x.next_step||"", createdAt:Date.parse(x.created_at) });
 
 function supaApi(){
@@ -658,6 +677,12 @@ function supaApi(){
     rq.data.forEach(x => { const r = reqFromRow(x); (b[x.owner] ||= {owner:x.owner, requests:{}}).requests[r.id] = r; });
     state.bookings = b; state.mine = b[state.uid] || null;
     state.updates = up.data.map(updFromRow);
+    /* photos are private: get short-lived view links for any we haven't fetched yet */
+    const need = [...new Set(state.updates.flatMap(u => u.photos))].filter(p => !photoUrls[p] || photoUrls[p].exp < Date.now());
+    for (let i = 0; i < need.length; i += 100){
+      const { data } = await sb.storage.from("work-photos").createSignedUrls(need.slice(i, i+100), 3600);
+      (data||[]).forEach(d => { if (d.signedUrl) photoUrls[d.path] = { url: d.signedUrl, exp: Date.now() + 50*60*1000 }; });
+    }
     if (state.isAdmin){
       const { data } = await sb.from("profiles").select("*").order("created_at");
       state.people = data || [];
@@ -706,10 +731,21 @@ function supaApi(){
       if (error) fail(error); await refresh();
     },
     async changePassword(pw){ const { error } = await sb.auth.updateUser({ password: pw }); if (error) fail(error); },
-    async addUpdate(u){
-      const { error } = await sb.from("work_updates").insert({ tech:u.tech, service:u.service, status:u.status, site:u.site, ref:u.ref,
-        hours:u.hours, work:u.work, materials:u.materials, next_step:u.next });
-      if (error) fail(error); await refresh();
+    async addUpdate(u, files=[], onProgress=()=>{}){
+      const paths = [];
+      for (let i = 0; i < files.length; i++){
+        onProgress(i+1, files.length);
+        const path = `${state.uid}/${Date.now()}-${i}-${Math.random().toString(36).slice(2,8)}.jpg`;
+        const { error } = await sb.storage.from("work-photos").upload(path, files[i], { contentType:"image/jpeg", upsert:false });
+        if (error){ if (paths.length) await sb.storage.from("work-photos").remove(paths); fail({ ...error, photo:true }); }
+        paths.push(path);
+      }
+      const row = { tech:u.tech, service:u.service, status:u.status, site:u.site, ref:u.ref,
+        hours:u.hours, work:u.work, materials:u.materials, next_step:u.next };
+      if (paths.length) row.photos = paths;
+      const { error } = await sb.from("work_updates").insert(row);
+      if (error){ if (paths.length) await sb.storage.from("work-photos").remove(paths); fail(error); }
+      await refresh();
     },
     async setTeam(){},
     async setRole(id, role){ const { error } = await sb.from("profiles").update({role}).eq("id", id); if (error) fail(error); await refresh(); },
@@ -874,10 +910,17 @@ function printJob(r, opts={}){
     !opts.invoice && ups.length ? el("div",{}, el("h3",{text:"Work carried out"}),
       el("table",{}, el("thead",{}, el("tr",{}, el("th",{text:"Date"}), el("th",{text:"Technician"}), el("th",{text:"Work done"}), el("th",{text:"Parts / materials"}))),
         el("tbody",{}, ups.map(u=>el("tr",{}, el("td",{text:fmtDT(u.createdAt)}), el("td",{text:u.tech}), el("td",{text:u.work}), el("td",{text:u.materials||"—"})))))) : null,
+    !opts.invoice && ups.some(u=>(u.photos||[]).some(p=>photoUrls[p])) ? el("div",{}, el("h3",{text:"Photos"}),
+      el("div",{style:"display:flex;flex-wrap:wrap;gap:8pt"}, ups.flatMap(u=>(u.photos||[]).filter(p=>photoUrls[p]).map(p=>
+        el("img",{src:photoUrls[p].url,alt:"Work photo, "+fmtDT(u.createdAt),style:"width:150pt;height:110pt;object-fit:cover;border:1px solid #ccc"}))))) : null,
     el("p",{class:"muted",style:"margin-top:18pt;font-size:9pt",text:"Nictech International · CFESA accredited · Universal EPA · Certified HVAC/R · Genuine OEM parts"}));
   const old=document.title; document.title = `Nictech ${kind} ${r.id}`;
-  window.print();
-  setTimeout(()=>{ document.title=old; }, 500);
+  /* wait for photos to load (max 5 s) so they appear in the PDF */
+  const imgs=[...area.querySelectorAll("img")].filter(i=>!i.complete);
+  Promise.race([Promise.all(imgs.map(i=>new Promise(res=>{ i.onload=i.onerror=res; }))), new Promise(res=>setTimeout(res,5000))]).then(()=>{
+    window.print();
+    setTimeout(()=>{ document.title=old; }, 500);
+  });
 }
 
 /* ---------- work log ---------- */
@@ -887,8 +930,48 @@ function postCard(u){
     el("div",{class:"meta"}, fmtDT(u.createdAt)+" · "+u.site+(u.ref?" · ":""), u.ref?el("span",{class:"mono",style:"color:var(--orange)",text:u.ref}):null, u.hours?` · ${u.hours} h on site`:""),
     el("p",{text:u.work}),
     u.materials?el("div",{class:"meta"},el("strong",{text:"Materials: "}),u.materials):null,
-    u.next?el("div",{class:"meta"},el("strong",{text:"Next: "}),u.next):null);
+    u.next?el("div",{class:"meta"},el("strong",{text:"Next: "}),u.next):null,
+    (u.photos||[]).some(p=>photoUrls[p]) ? el("div",{class:"thumbs"}, u.photos.filter(p=>photoUrls[p]).map((p,i)=>
+      el("a",{class:"thumb",href:photoUrls[p].url,target:"_blank",rel:"noopener","aria-label":"Open photo "+(i+1)+" full size"},
+        el("img",{src:photoUrls[p].url,alt:"Work photo "+(i+1)+" from "+(u.site||"site"),loading:"lazy"})))) : null);
 }
+
+/* ---------- work photos: pick, shrink, preview ---------- */
+const photoUrls = {};
+let pickedPhotos = [];   // [{blob, url}]
+/* shrinks a phone photo to at most 1600 px wide, as JPEG, so uploads are small on mobile data */
+function shrinkPhoto(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image(), src = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1600, scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(src);
+      c.toBlob(b => b ? resolve(b) : reject(new Error("Couldn't read the photo")), "image/jpeg", 0.8);
+    };
+    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error("That file isn't a photo the app can read")); };
+    img.src = src;
+  });
+}
+function renderPicked(){
+  const box = $("#photoPreview"); box.replaceChildren();
+  pickedPhotos.forEach((p, i) => box.append(el("div",{class:"thumb"},
+    el("img",{src:p.url, alt:"Selected photo "+(i+1)}),
+    el("button",{type:"button","aria-label":"Remove photo "+(i+1), onclick:()=>{ URL.revokeObjectURL(p.url); pickedPhotos.splice(i,1); renderPicked(); }},"×"))));
+  $("#photoHint").textContent = pickedPhotos.length ? `${pickedPhotos.length} of 6 photos added.` : "Up to 6. Before and after shots work best.";
+}
+$("#p-photos").addEventListener("change", async e => {
+  const files = [...e.target.files]; e.target.value = "";
+  const room = 6 - pickedPhotos.length;
+  if (files.length > room) toast(room ? `Only ${room} more photo${room>1?"s":""} can be added.` : "6 photos is the most per update.");
+  for (const f of files.slice(0, Math.max(room,0))){
+    try { const blob = await shrinkPhoto(f); pickedPhotos.push({ blob, url: URL.createObjectURL(blob) }); }
+    catch(x){ toast(x.message); }
+  }
+  renderPicked();
+});
 function renderFeed(){
   const fs=$("#f-svc").value, fst=$("#f-status").value;
   const list=state.updates.filter(u=>(!fs||u.service===fs)&&(!fst||u.status===fst));
@@ -903,7 +986,7 @@ function renderTechSelect(){
   const form=$("#postForm"), gate=$("#postGate");
   if (state.authMode){
     const ok = state.signedIn && state.isStaff;
-    form.hidden = !ok; gate.hidden = ok;
+    form.hidden = !ok; gate.hidden = ok; $("#photoField").hidden = false;
     if (!state.signedIn){ $("#postGateTitle").textContent="Technicians: sign in to post"; $("#postGateText").textContent="Sign in with your staff account to post today's work."; $("#postGateBtn").hidden=false; }
     else if (!ok){ $("#postGateTitle").textContent="Staff only"; $("#postGateText").textContent="Only Nictech technicians and office staff post here. If you work for Nictech, ask the office to set your account to Technician."; $("#postGateBtn").hidden=true; }
     const t=$("#p-tech"); t.value = state.me?.full_name || state.email || ""; t.readOnly = true;
@@ -990,10 +1073,16 @@ $("#postForm").addEventListener("submit",async e=>{
   const u={ tech:v("#p-tech"), service:v("#p-svc"), status:v("#p-status"), site:v("#p-site"), ref:v("#p-ref").toUpperCase(),
     hours:Number($("#p-hours").value)||0, work:v("#p-work"), materials:v("#p-mat"), next:v("#p-next"), createdAt:Date.now() };
   const btn=$("#postBtn"); btn.disabled=true;
+  const files = state.authMode ? pickedPhotos.map(p=>p.blob) : [];
   try{ try{ localStorage.setItem("nictech-tech",u.tech); }catch(_){}
-    await api.addUpdate(u); ["#p-site","#p-ref","#p-work","#p-mat","#p-next"].forEach(i=>$(i).value=""); toast("Update posted"); }
-  catch(x){ err.textContent = x&&x.code==="invalid_argument" ? "This account can view the log but not post. Ask the office for Contributor access." : "The update didn't post. Check your connection and try again."; err.hidden=false; }
-  finally{ btn.disabled=false; }
+    await api.addUpdate(u, files, (i,n)=>{ btn.textContent=`Uploading photo ${i} of ${n}…`; });
+    ["#p-site","#p-ref","#p-work","#p-mat","#p-next"].forEach(i=>$(i).value="");
+    pickedPhotos.forEach(p=>URL.revokeObjectURL(p.url)); pickedPhotos=[]; renderPicked();
+    toast(files.length ? `Update posted with ${files.length} photo${files.length>1?"s":""}` : "Update posted"); }
+  catch(x){ err.textContent = x&&x.code==="invalid_argument" ? "This account can view the log but not post. Ask the office for Contributor access."
+      : x?.photo ? "The photos didn't upload. Check your connection and try again. Your notes are still here."
+      : "The update didn't post. Check your connection and try again."; err.hidden=false; }
+  finally{ btn.disabled=false; btn.textContent="Post update"; }
 });
 
 /* ---------- office ---------- */

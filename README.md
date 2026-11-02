@@ -10,6 +10,7 @@ Live app: https://josephinejacobs2000july-dev.github.io/nictech-connect/
 - `database/supabase-setup.sql` – creates the Supabase tables and security rules (run once in the Supabase SQL Editor)
 - `database/security-update-1.sql` – extra protections: size limits, a daily booking limit, and locked office fields (run once, after the setup file)
 - `database/update-2-portal.sql` – invoice amount, currency and payment status on each job (run once, after security update 1)
+- `database/update-3-photos.sql` – private photo storage for technicians' work photos (run once, after update 2)
 
 ## Who can do what
 | Access | Can |
