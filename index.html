@@ -144,8 +144,7 @@ textarea{min-height:96px;resize:vertical}
 .why b{font-family:var(--f-mono);color:var(--orange);min-width:2ch}
 .contact .line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .contact .line:last-child{border:0}
-.contact .val{font-family:var(--f-mono);font-size:.95rem;overflow-wrap:anywhere;color:var(--fg);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
-.contact .val:hover{text-decoration-color:var(--green)}
+.contact .val{font-family:var(--f-mono);font-size:.95rem;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text;cursor:text}
 .contact .acts{display:flex;gap:6px}
 .contact-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .resp{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:.95rem;margin-top:10px}
@@ -333,10 +332,10 @@ textarea{min-height:96px;resize:vertical}
       <div class="eyebrow">Contact</div>
       <h2 style="margin-top:6px;font-size:1.5rem">Talk to the office</h2>
       <div style="margin-top:12px">
-        <div class="line"><span>Phone</span><a class="val" href="tel:+231777580590">+231 777 580 590</a><span class="acts"><a class="btn btn-primary btn-sm" href="tel:+231777580590">Call</a><button class="btn btn-ghost btn-sm" data-copy="+231777580590">Copy</button></span></div>
-        <div class="line"><span>Phone</span><a class="val" href="tel:+231886580590">+231 886 580 590</a><span class="acts"><a class="btn btn-primary btn-sm" href="tel:+231886580590">Call</a><button class="btn btn-ghost btn-sm" data-copy="+231886580590">Copy</button></span></div>
-        <div class="line"><span>WhatsApp</span><a class="val" href="https://wa.me/14435255707" target="_blank" rel="noopener">+1 443 525 5707</a><span class="acts"><a class="btn btn-primary btn-sm" href="https://wa.me/14435255707?text=Hello%20Nictech%2C%20I%20would%20like%20to%20ask%20about%20your%20services." target="_blank" rel="noopener">Chat</a><button class="btn btn-ghost btn-sm" data-copy="+14435255707">Copy</button></span></div>
-        <div class="line"><span>Email</span><a class="val" href="mailto:NicholassmcCauley@gmail.com?subject=Service%20enquiry">NicholassmcCauley@gmail.com</a><span class="acts"><a class="btn btn-primary btn-sm" href="mailto:NicholassmcCauley@gmail.com?subject=Service%20enquiry">Email</a><button class="btn btn-ghost btn-sm" data-copy="NicholassmcCauley@gmail.com">Copy</button></span></div>
+        <div class="line"><span>Phone</span><span class="val">+231 777 580 590</span><span class="acts"><a class="btn btn-primary btn-sm" href="tel:+231777580590">Call</a><button class="btn btn-ghost btn-sm" data-copy="+231777580590">Copy</button></span></div>
+        <div class="line"><span>Phone</span><span class="val">+231 886 580 590</span><span class="acts"><a class="btn btn-primary btn-sm" href="tel:+231886580590">Call</a><button class="btn btn-ghost btn-sm" data-copy="+231886580590">Copy</button></span></div>
+        <div class="line"><span>WhatsApp</span><span class="val">+1 443 525 5707</span><span class="acts"><a class="btn btn-primary btn-sm" href="https://wa.me/14435255707?text=Hello%20Nictech%2C%20I%20would%20like%20to%20ask%20about%20your%20services." target="_blank" rel="noopener">Chat</a><button class="btn btn-ghost btn-sm" data-copy="+14435255707">Copy</button></span></div>
+        <div class="line"><span>Email</span><span class="val">NicholassmcCauley@gmail.com</span><span class="acts"><a class="btn btn-primary btn-sm" href="mailto:NicholassmcCauley@gmail.com?subject=Service%20enquiry">Email</a><button class="btn btn-ghost btn-sm" data-copy="NicholassmcCauley@gmail.com">Copy</button></span></div>
         <div class="line"><span>Office</span><span>Baptist Seminary, RIA Highway, Monrovia</span></div>
       </div>
       <p class="hint" style="margin-top:10px">We accept referrals.</p>
@@ -547,10 +546,24 @@ const toDate = t => typeof t==="string" && /^\d{4}-\d{2}-\d{2}$/.test(t) ? new D
 const fmtDate = t => t ? toDate(t).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}) : "—";
 /* phone numbers typed by clients -> call and WhatsApp links; local Liberian numbers (0777…) get +231 */
 function phoneDigits(p){ let d=String(p||"").replace(/[^\d+]/g,""); if(d.startsWith("+")) return d.slice(1); if(d.startsWith("00")) return d.slice(2); if(d.startsWith("0")) return "231"+d.slice(1); return d; }
+function copyText(v){
+  const fallback = () => {
+    const t=document.createElement("textarea"); t.value=v; t.setAttribute("readonly","");
+    t.style.position="absolute"; t.style.left="-9999px"; t.style.top=window.scrollY+"px"; document.body.appendChild(t);
+    t.select(); t.setSelectionRange(0, v.length);
+    let ok=false; try{ ok=document.execCommand("copy"); }catch(_){}
+    t.remove();
+    toast(ok ? "Copied "+v : "Press and hold to copy: "+v);
+  };
+  try{ if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(v).then(()=>toast("Copied "+v), fallback); return; } }catch(_){}
+  fallback();
+}
 function contactLinks(phone,email){
   const d=phoneDigits(phone); const out=[];
   if(d.length>=7){ out.push(el("a",{class:"btn btn-ghost btn-sm",href:"tel:+"+d},"Call")); out.push(el("a",{class:"btn btn-ghost btn-sm",href:"https://wa.me/"+d,target:"_blank",rel:"noopener"},"WhatsApp")); }
   if(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) out.push(el("a",{class:"btn btn-ghost btn-sm",href:"mailto:"+encodeURIComponent(email).replace("%40","@")},"Email"));
+  if(phone) out.push(el("button",{class:"btn btn-ghost btn-sm",type:"button",onclick:()=>copyText(String(phone).trim())},"Copy phone"));
+  if(email) out.push(el("button",{class:"btn btn-ghost btn-sm",type:"button",onclick:()=>copyText(String(email).trim())},"Copy email"));
   return out.length ? el("div",{class:"contact-links"},out) : null;
 }
 const fmtDT = t => new Date(t).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
@@ -725,7 +738,7 @@ function preselect(id){ const c=$("#svc-"+id); if(c) c.checked=true; }
 
 document.addEventListener("click",e=>{
   const c=e.target.closest("[data-copy]");
-  if(c){ const v=c.dataset.copy; navigator.clipboard?.writeText(v).then(()=>toast("Copied "+v),()=>toast(v)) ?? toast(v); }
+  if(c){ copyText(c.dataset.copy); }
   const p=e.target.closest("[data-plan]"); if(p){ $("#b-plan").value=p.dataset.plan; }
   const sc=e.target.closest("[data-scroll]"); if(sc){ e.preventDefault(); document.getElementById(sc.dataset.scroll)?.scrollIntoView({behavior:"smooth"}); }
 });

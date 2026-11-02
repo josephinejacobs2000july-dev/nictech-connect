@@ -1,5 +1,5 @@
 // Nictech Service Desk: offline shell cache
-const CACHE = "nictech-v4";
+const CACHE = "nictech-v5";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", e => {
