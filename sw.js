@@ -1,5 +1,5 @@
 // Nictech Service Desk: offline shell cache
-const CACHE = "nictech-v1";
+const CACHE = "nictech-v2";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", e => {
@@ -16,6 +16,7 @@ self.addEventListener("activate", e => {
 // Network first for pages (so updates arrive), cache fallback when offline
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
+  if (new URL(e.request.url).origin !== location.origin) return; // database and fonts go straight to the network
   e.respondWith(
     fetch(e.request)
       .then(res => {

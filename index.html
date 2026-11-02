@@ -42,8 +42,7 @@
   --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}
 *{box-sizing:border-box}
 html,body{background:var(--bg);color:var(--fg)}
-body{font-family:var(--f-body);font-size:16px;line-height:1.5;padding-bottom:84px}
-@media (min-width:820px){body{padding-bottom:0}}
+body{font-family:var(--f-body);font-size:16px;line-height:1.5}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
 h1,h2,h3{font-family:var(--f-display);font-stretch:112%;line-height:1.1;margin:0;text-wrap:balance}
 h2{font-size:clamp(1.5rem,3.4vw,2rem);font-weight:800}
@@ -69,9 +68,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tabs a[aria-current="page"]{color:var(--green);background:var(--green-soft)}
 .tabs svg{width:18px;height:18px}
 @media (max-width:819px){
-  .tabs{position:fixed;left:0;right:0;bottom:0;margin:0;background:var(--surface);border-top:1px solid var(--line);justify-content:space-around;z-index:9;
-    padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
-  .tabs a{flex-direction:column;gap:2px;font-size:.7rem;padding:6px 4px;flex:1;text-align:center}
+  .top .wrap{flex-wrap:wrap;gap:6px 12px;padding-block:8px}
+  .tabs{order:3;width:100%;margin:0;overflow-x:auto;justify-content:space-between}
+  .tabs a{flex-direction:column;gap:2px;font-size:.74rem;padding:6px 4px;flex:1 0 auto;text-align:center;min-width:64px}
 }
 .who{font-size:.8rem;color:var(--muted);white-space:nowrap}
 @media (max-width:819px){.who{margin-left:auto}}
@@ -106,7 +105,7 @@ textarea{min-height:96px;resize:vertical}
 .chip input:focus-visible+span{outline:3px solid var(--orange);outline-offset:2px}
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
 @media (min-width:820px){.toast{bottom:24px}}
 
 /* home */
@@ -216,6 +215,9 @@ textarea{min-height:96px;resize:vertical}
 .stars button{background:none;border:0;font-size:1.4rem;cursor:pointer;color:var(--line);padding:0 2px}
 .stars button.on{color:var(--orange)}
 .notice{background:var(--orange-soft);border-radius:10px;padding:12px 14px;font-size:.92rem}
+.person{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.person:last-child{border-bottom:0}
+.person select{width:auto;min-width:130px}
 .success{background:var(--green-soft);border:1px solid var(--green);border-radius:14px;padding:22px;display:grid;gap:10px}
 .success .bigref{font-family:var(--f-mono);font-size:1.6rem;font-weight:700;color:var(--green)}
 @media (prefers-reduced-motion:no-preference){.view{animation:in .25s ease}@keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
@@ -234,8 +236,9 @@ textarea{min-height:96px;resize:vertical}
       <a href="#home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Home</a>
       <a href="#book"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M12 13v5M9.5 15.5h5"/></svg>Book</a>
       <a href="#requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>My requests</a>
-      <a href="#updates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 6a4 4 0 0 0-5 5l-6 6 3 3 6-6a4 4 0 0 0 5-5l-2 2-3-1-1-3z"/></svg>Work log</a>
+      <a href="#updates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 6a4 4 0 0 0-5 5l-6 6 3 3 6-6a4 4 0 0 0 5-5l-2 2-3-1-1-3z"/></svg>Daily work</a>
       <a href="#ops" id="opsTab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Office</a>
+      <a href="#account" id="acctTab" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span id="acctLabel">Sign in</span></a>
     </nav>
     <span class="who" id="who"></span>
   </div>
@@ -254,6 +257,7 @@ textarea{min-height:96px;resize:vertical}
       <div class="ctas">
         <a class="btn btn-primary" href="#book">Book a service</a>
         <a class="btn btn-ghost" href="#plans" data-scroll="plans">See maintenance plans</a>
+        <a class="btn btn-ghost" href="#updates" style="border-color:var(--orange);color:var(--orange)">Workers: post today's work</a>
       </div>
       <div class="creds" aria-label="Accreditations">
         <span class="cred">CFESA accredited</span><span class="cred">Universal EPA</span><span class="cred">Certified HVAC/R</span><span class="cred">Genuine OEM parts</span>
@@ -323,6 +327,7 @@ textarea{min-height:96px;resize:vertical}
   <div class="eyebrow">Service request</div>
   <h2 style="margin-top:6px">Book a service or request a contract</h2>
   <p class="muted" style="margin-top:8px;max-width:62ch">Tell us what needs attention. The office reviews every request, confirms a date, and assigns a technician. You can follow progress under My requests.</p>
+  <div id="bookGate" class="empty" style="margin-top:20px" hidden><h3>Sign in to book</h3><p>Create a free account once, then book services and follow every job from your phone.</p><a class="btn btn-primary" href="#account" style="margin-top:14px">Sign in or create an account</a></div>
   <div id="bookDone" hidden style="margin-top:20px"></div>
   <form id="bookForm" class="panel" style="margin-top:20px;display:grid;gap:18px" novalidate>
     <div class="grid2">
@@ -365,9 +370,10 @@ textarea{min-height:96px;resize:vertical}
   <h2 style="margin-top:6px">Daily work log</h2>
   <p class="muted" style="margin-top:8px;max-width:62ch">Technicians post what they did on site each day. Clients see updates on their own jobs; the office sees everything.</p>
   <div class="two-col" style="margin-top:20px">
+    <div id="postGate" class="panel sticky" hidden><h3 id="postGateTitle">Staff only</h3><p class="muted" id="postGateText" style="margin-top:6px"></p><a class="btn btn-primary btn-sm" href="#account" id="postGateBtn" style="margin-top:14px">Sign in</a></div>
     <form id="postForm" class="panel sticky" style="display:grid;gap:14px" novalidate>
       <h3>Post today's work</h3>
-      <div class="field"><label for="p-tech">Technician</label><select id="p-tech"></select><span class="hint" id="p-techHint"></span></div>
+      <div class="field"><label for="p-tech">Technician</label><input id="p-tech" type="text" list="p-techList" placeholder="Your name" autocomplete="off"><datalist id="p-techList"></datalist><span class="hint" id="p-techHint"></span></div>
       <div class="grid2" style="grid-template-columns:1fr 1fr">
         <div class="field"><label for="p-svc">Service</label><select id="p-svc"></select></div>
         <div class="field"><label for="p-status">Status</label><select id="p-status"><option value="track">On track</option><option value="done">Job completed</option><option value="parts">Waiting on parts</option><option value="delayed">Delayed</option></select></div>
@@ -406,7 +412,12 @@ textarea{min-height:96px;resize:vertical}
       <select id="o-kind" aria-label="Filter by type"><option value="">Jobs and contracts</option><option value="contract">Contracts only</option><option value="job">One-time jobs only</option></select>
     </div>
     <div class="card-list" id="opsList"></div>
-    <div class="panel" style="margin-top:28px">
+    <div class="panel" style="margin-top:28px" id="peoplePanel" hidden>
+      <h3>People and access</h3>
+      <p class="muted" style="font-size:.92rem;margin-top:4px">Everyone who signs up starts as a client. Set Nictech workers to Technician so they can post daily work, and office staff to Office.</p>
+      <div id="people" style="margin-top:8px"></div>
+    </div>
+    <div class="panel" style="margin-top:28px" id="teamPanel">
       <h3>Technicians</h3>
       <p class="muted" style="font-size:.92rem;margin-top:4px">Names here appear in the assign list and the work log.</p>
       <div class="team" id="team"></div>
@@ -418,8 +429,46 @@ textarea{min-height:96px;resize:vertical}
   </div>
 </div>
 
+<!-- ACCOUNT -->
+<div class="view" id="v-account" hidden>
+  <div id="acctOut">
+    <div class="eyebrow">Your account</div>
+    <h2 style="margin-top:6px">Sign in to Nictech</h2>
+    <p class="muted" style="margin-top:8px;max-width:62ch">Clients sign in to book and track jobs. Technicians and office staff use the same sign-in; the office then gives staff their access.</p>
+    <div class="split" style="margin-top:20px">
+      <form id="inForm" class="panel" style="display:grid;gap:14px;align-content:start" novalidate>
+        <h3>Sign in</h3>
+        <div class="field"><label for="in-email">Email</label><input id="in-email" type="email" autocomplete="email"></div>
+        <div class="field"><label for="in-pw">Password</label><input id="in-pw" type="password" autocomplete="current-password"></div>
+        <p id="inErr" class="notice" hidden></p>
+        <div><button class="btn btn-primary" type="submit" id="inBtn">Sign in</button></div>
+      </form>
+      <form id="upForm" class="panel" style="display:grid;gap:14px" novalidate>
+        <h3>Create an account</h3>
+        <div class="field"><label for="up-name">Full name</label><input id="up-name" type="text" autocomplete="name"></div>
+        <div class="field"><label for="up-org">Organization (optional)</label><input id="up-org" type="text" placeholder="NGO, ministry or company"></div>
+        <div class="field"><label for="up-phone">Phone / WhatsApp</label><input id="up-phone" type="tel" placeholder="+231 ..."></div>
+        <div class="field"><label for="up-email">Email</label><input id="up-email" type="email" autocomplete="email"></div>
+        <div class="field"><label for="up-pw">Password</label><input id="up-pw" type="password" autocomplete="new-password"><span class="hint">At least 6 characters.</span></div>
+        <p id="upErr" class="notice" hidden></p>
+        <div><button class="btn btn-primary" type="submit" id="upBtn">Create account</button></div>
+      </form>
+    </div>
+  </div>
+  <div id="acctIn" hidden>
+    <div class="eyebrow">Your account</div>
+    <h2 style="margin-top:6px" id="acctName"></h2>
+    <div class="panel" style="margin-top:20px;display:grid;gap:16px;max-width:640px">
+      <div class="kv" id="acctKv"></div>
+      <p class="muted" id="acctRoleNote" style="font-size:.92rem"></p>
+      <div><button class="btn btn-ghost" type="button" id="outBtn">Sign out</button></div>
+    </div>
+  </div>
+</div>
+
 </main>
 <div class="toast" id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
 <script>
 (() => {
@@ -509,10 +558,95 @@ function cloudApi(db, user){
   };
 }
 
+/* Supabase: the hosted app's shared database with sign-in */
+const SB_URL = "https://pqucbmurtjcmtriilviu.supabase.co";
+const SB_KEY = "sb_publishable_3T7alSWDtBC-1kEo9GtEiw_Le9Qg1UT";
+const reqToRow = r => ({ id:r.id, org:r.org, client_type:r.clientType, services:r.services, plan:r.plan, priority:r.priority,
+  site:r.site, preferred_date:r.preferredDate||null, equipment:r.equipment, details:r.details, contact:r.contact, phone:r.phone,
+  email:r.email, po:r.po, status:"new" });
+const reqFromRow = x => ({ id:x.id, org:x.org, clientType:x.client_type||"", services:x.services||[], plan:x.plan||"", priority:x.priority||"Routine",
+  site:x.site||"", preferredDate:x.preferred_date||"", equipment:x.equipment||"", details:x.details||"", contact:x.contact||"", phone:x.phone||"",
+  email:x.email||"", po:x.po||"", status:x.status, tech:x.tech||"", scheduledDate:x.scheduled_date||"", officeNote:x.office_note||"",
+  rating:x.rating||0, createdAt:Date.parse(x.created_at), updatedAt:Date.parse(x.updated_at) });
+const updFromRow = x => ({ _id:x.id, tech:x.tech, service:x.service, status:x.status, site:x.site, ref:x.ref||"", hours:Number(x.hours)||0,
+  work:x.work, materials:x.materials||"", next:x.next_step||"", createdAt:Date.parse(x.created_at) });
+
+function supaApi(){
+  const sb = window.supabase.createClient(SB_URL, SB_KEY);
+  async function loadProfile(){
+    const { data:{ session } } = await sb.auth.getSession();
+    if (!session){ Object.assign(state,{signedIn:false,uid:null,me:null,email:"",isAdmin:false,isStaff:false}); return; }
+    state.signedIn = true; state.uid = session.user.id; state.email = session.user.email || "";
+    const { data } = await sb.from("profiles").select("*").eq("id", state.uid).maybeSingle();
+    state.me = data || { full_name:"", organization:"", phone:"", role:"client" };
+    state.isAdmin = state.me.role === "office"; state.isStaff = state.me.role !== "client";
+  }
+  async function loadData(){
+    if (!state.signedIn){ Object.assign(state,{bookings:{},mine:null,updates:[],people:[],team:[]}); return; }
+    const [rq, up] = await Promise.all([
+      sb.from("requests").select("*").order("created_at",{ascending:false}).limit(500),
+      sb.from("work_updates").select("*").order("created_at",{ascending:false}).limit(300) ]);
+    if (rq.error || up.error) throw (rq.error || up.error);
+    const b = {};
+    rq.data.forEach(x => { const r = reqFromRow(x); (b[x.owner] ||= {owner:x.owner, requests:{}}).requests[r.id] = r; });
+    state.bookings = b; state.mine = b[state.uid] || null;
+    state.updates = up.data.map(updFromRow);
+    if (state.isAdmin){
+      const { data } = await sb.from("profiles").select("*").order("created_at");
+      state.people = data || [];
+      state.team = state.people.filter(p => p.role !== "client" && p.full_name).map(p => p.full_name);
+    }
+  }
+  async function refresh(){
+    try { await loadProfile(); await loadData(); state.mode = "supabase"; }
+    catch(e){ state.mode = "offline"; }
+    emit();
+  }
+  let t; const soon = () => { clearTimeout(t); t = setTimeout(refresh, 300); };
+  const fail = e => { throw e; };
+  return {
+    async start(){
+      state.authMode = true;
+      sb.auth.onAuthStateChange(() => soon());
+      sb.channel("nictech")
+        .on("postgres_changes", {event:"*", schema:"public", table:"requests"}, soon)
+        .on("postgres_changes", {event:"*", schema:"public", table:"work_updates"}, soon)
+        .subscribe();
+      await refresh();
+    },
+    async signIn(email, password){ const { error } = await sb.auth.signInWithPassword({email, password}); if (error) fail(error); await refresh(); },
+    async signUp(f){
+      const { data, error } = await sb.auth.signUp({ email:f.email, password:f.password,
+        options:{ data:{ full_name:f.name, organization:f.org, phone:f.phone }, emailRedirectTo: location.origin + location.pathname } });
+      if (error) fail(error); await refresh(); return !!data.session;
+    },
+    async signOut(){ await sb.auth.signOut(); await refresh(); },
+    async addRequest(r){ const { error } = await sb.from("requests").insert(reqToRow(r)); if (error) fail(error); await refresh(); },
+    async patchRequest(owner, id, p){
+      const row = {};
+      if ("status" in p) row.status = p.status;
+      if ("tech" in p) row.tech = p.tech;
+      if ("scheduledDate" in p) row.scheduled_date = p.scheduledDate || null;
+      if ("officeNote" in p) row.office_note = p.officeNote;
+      if ("rating" in p) row.rating = p.rating;
+      const { error } = await sb.from("requests").update(row).eq("id", id); if (error) fail(error); await refresh();
+    },
+    async addUpdate(u){
+      const { error } = await sb.from("work_updates").insert({ tech:u.tech, service:u.service, status:u.status, site:u.site, ref:u.ref,
+        hours:u.hours, work:u.work, materials:u.materials, next_step:u.next });
+      if (error) fail(error); await refresh();
+    },
+    async setTeam(){},
+    async setRole(id, role){ const { error } = await sb.from("profiles").update({role}).eq("id", id); if (error) fail(error); await refresh(); },
+  };
+}
+
 async function boot(){
   let db=null, user=null;
-  try{ if (window.claude && claude.use){ [db,user] = await Promise.all([claude.use("db"), claude.use("user")]); } }catch(e){}
+  const inClaude = !!(window.claude && claude.use);
+  try{ if (inClaude){ [db,user] = await Promise.all([claude.use("db"), claude.use("user")]); } }catch(e){}
   if (db && user){ api=cloudApi(db,user); await api.start(); if(state.mode==="loading") emit(); }
+  else if (!inClaude && window.supabase && location.protocol==="https:"){ api=supaApi(); await api.start(); }
   else { api=localApi(); state.mode="local"; api.start(); }
   emit();
 }
@@ -604,6 +738,7 @@ function renderMine(){
   const box=$("#myList"); box.replaceChildren();
   const reqs = state.mine ? Object.values(state.mine.requests||{}).sort((a,b)=>b.createdAt-a.createdAt) : [];
   if (state.mode==="loading"){ box.append(el("div",{class:"empty"},"Loading your requests…")); return; }
+  if (state.authMode && !state.signedIn){ box.append(el("div",{class:"empty"}, el("h3",{text:"Sign in to see your requests"}), el("p",{text:"Your bookings, their status and the technicians' notes appear here once you sign in."}), el("a",{class:"btn btn-primary",href:"#account",style:"margin-top:14px"},"Sign in"))); return; }
   if (!reqs.length){ box.append(el("div",{class:"empty"}, el("h3",{text:"No requests yet"}), el("p",{text:"When you book a service or request a maintenance contract, it shows up here with its status and the technicians' notes."}), el("a",{class:"btn btn-primary",href:"#book",style:"margin-top:14px"},"Book a service"))); return; }
   reqs.forEach(r=>box.append(requestCard(r,state.uid)));
 }
@@ -623,24 +758,81 @@ function renderFeed(){
   const box=$("#feed"); box.replaceChildren();
   $("#feedCount").textContent = list.length ? `${list.length} update${list.length>1?"s":""}` : "";
   if(state.mode==="loading"){ box.append(el("div",{class:"empty"},"Loading the work log…")); return; }
+  if(state.authMode && !state.signedIn){ box.append(el("div",{class:"empty"}, el("h3",{text:"Sign in to see work updates"}), el("p",{text:"Clients see the technicians' notes on their own jobs. Staff see the full log."}))); return; }
   if(!list.length){ box.append(el("div",{class:"empty"}, el("h3",{text: state.updates.length?"No updates match these filters":"No work posted yet"}), el("p",{text:"Technicians post here at the end of each site visit: what they did, parts used and what comes next."}))); return; }
   list.forEach(u=>box.append(postCard(u)));
 }
 function renderTechSelect(){
-  const sel=$("#p-tech"); const cur=sel.value; sel.replaceChildren();
-  if(!state.team.length){ sel.append(el("option",{value:"",text:"No technicians added yet"})); $("#p-techHint").textContent="The office adds technicians on the Office tab."; }
-  else { $("#p-techHint").textContent=""; state.team.forEach(t=>sel.append(el("option",{value:t,text:t}))); if(state.team.includes(cur)) sel.value=cur; }
+  const form=$("#postForm"), gate=$("#postGate");
+  if (state.authMode){
+    const ok = state.signedIn && state.isStaff;
+    form.hidden = !ok; gate.hidden = ok;
+    if (!state.signedIn){ $("#postGateTitle").textContent="Technicians: sign in to post"; $("#postGateText").textContent="Sign in with your staff account to post today's work."; $("#postGateBtn").hidden=false; }
+    else if (!ok){ $("#postGateTitle").textContent="Staff only"; $("#postGateText").textContent="Only Nictech technicians and office staff post here. If you work for Nictech, ask the office to set your account to Technician."; $("#postGateBtn").hidden=true; }
+    const t=$("#p-tech"); t.value = state.me?.full_name || state.email || ""; t.readOnly = true;
+    $("#p-techHint").textContent = "Posted under your account name.";
+    return;
+  }
+  const dl=$("#p-techList"); dl.replaceChildren(); state.team.forEach(t=>dl.append(el("option",{value:t})));
+  $("#p-techHint").textContent = state.team.length ? "Pick your name from the list or type it." : "Type your name.";
 }
+function renderBook(){
+  const gated = state.authMode && !state.signedIn;
+  $("#bookGate").hidden = !gated;
+  if (gated){ $("#bookForm").hidden = true; $("#bookDone").hidden = true; return; }
+  if ($("#bookDone").hidden) $("#bookForm").hidden = false;
+  if (state.authMode && state.me){
+    const fill=(id,v)=>{ const i=$(id); if(i && !i.value && v) i.value=v; };
+    fill("#b-org", state.me.organization); fill("#b-contact", state.me.full_name); fill("#b-phone", state.me.phone); fill("#b-email", state.email);
+  }
+}
+const ROLE_LABEL = {client:"Client", worker:"Technician", office:"Office"};
+function renderAccount(){
+  if (!state.authMode) return;
+  $("#acctOut").hidden = state.signedIn; $("#acctIn").hidden = !state.signedIn;
+  if (!state.signedIn) return;
+  const m = state.me || {};
+  $("#acctName").textContent = m.full_name || state.email;
+  const kv = (label, val) => el("div",{}, el("span",{text:label}), val||"—");
+  $("#acctKv").replaceChildren(kv("Email",state.email), kv("Organization",m.organization), kv("Phone",m.phone), kv("Access",ROLE_LABEL[m.role]||"Client"));
+  $("#acctRoleNote").textContent = m.role==="office" ? "You can review requests, assign technicians and manage people on the Office tab."
+    : m.role==="worker" ? "You can post your daily work on the Daily work tab and see every job's log."
+    : "You can book services and follow your jobs under My requests. Nictech staff: ask the office to change your access.";
+}
+$("#inForm").addEventListener("submit", async e=>{
+  e.preventDefault(); const err=$("#inErr"); err.hidden=true;
+  const email=$("#in-email").value.trim(), pw=$("#in-pw").value;
+  if(!email||!pw){ err.textContent="Enter your email and password."; err.hidden=false; return; }
+  const b=$("#inBtn"); b.disabled=true;
+  try{ await api.signIn(email,pw); $("#in-pw").value=""; toast("Signed in"); location.hash = state.isStaff ? (state.isAdmin?"ops":"updates") : "requests"; }
+  catch(x){ err.textContent = /confirm/i.test(x?.message||"") ? "Confirm your email first: open the link Supabase sent you, then sign in." : "Email or password is wrong. Check them and try again."; err.hidden=false; }
+  finally{ b.disabled=false; }
+});
+$("#upForm").addEventListener("submit", async e=>{
+  e.preventDefault(); const err=$("#upErr"); err.hidden=true;
+  const f={ name:$("#up-name").value.trim(), org:$("#up-org").value.trim(), phone:$("#up-phone").value.trim(), email:$("#up-email").value.trim(), password:$("#up-pw").value };
+  const miss=[]; if(!f.name) miss.push("full name"); if(!f.phone) miss.push("phone"); if(!f.email) miss.push("email"); if(f.password.length<6) miss.push("a password of 6+ characters");
+  if(miss.length){ err.textContent="Please add: "+miss.join(", ")+"."; err.hidden=false; return; }
+  const b=$("#upBtn"); b.disabled=true;
+  try{
+    const inNow = await api.signUp(f); $("#up-pw").value="";
+    if(inNow){ toast("Account created"); location.hash="book"; }
+    else { err.textContent="Account created. Check your email for a confirmation link, then sign in here."; err.hidden=false; }
+  }catch(x){ err.textContent = /registered|exists/i.test(x?.message||"") ? "An account with this email already exists. Sign in instead." : (x?.message || "Couldn't create the account. Try again."); err.hidden=false; }
+  finally{ b.disabled=false; }
+});
+$("#outBtn").addEventListener("click", async ()=>{ await api.signOut(); toast("Signed out"); location.hash="home"; });
 $("#f-svc").addEventListener("change",renderFeed); $("#f-status").addEventListener("change",renderFeed);
 $("#postForm").addEventListener("submit",async e=>{
   e.preventDefault(); const err=$("#postErr"); err.hidden=true;
   const v=id=>$(id).value.trim();
-  if(!v("#p-tech")){ err.textContent="Pick your name. If it's missing, ask the office to add you."; err.hidden=false; return; }
+  if(!v("#p-tech")){ err.textContent="Add your name."; err.hidden=false; return; }
   if(!v("#p-site")||!v("#p-work")){ err.textContent="Add the site and what you did today."; err.hidden=false; return; }
   const u={ tech:v("#p-tech"), service:v("#p-svc"), status:v("#p-status"), site:v("#p-site"), ref:v("#p-ref").toUpperCase(),
     hours:Number($("#p-hours").value)||0, work:v("#p-work"), materials:v("#p-mat"), next:v("#p-next"), createdAt:Date.now() };
   const btn=$("#postBtn"); btn.disabled=true;
-  try{ await api.addUpdate(u); ["#p-site","#p-ref","#p-work","#p-mat","#p-next"].forEach(i=>$(i).value=""); toast("Update posted"); }
+  try{ try{ localStorage.setItem("nictech-tech",u.tech); }catch(_){}
+    await api.addUpdate(u); ["#p-site","#p-ref","#p-work","#p-mat","#p-next"].forEach(i=>$(i).value=""); toast("Update posted"); }
   catch(x){ err.textContent = x&&x.code==="invalid_argument" ? "This account can view the log but not post. Ask the office for Contributor access." : "The update didn't post. Check your connection and try again."; err.hidden=false; }
   finally{ btn.disabled=false; }
 });
@@ -667,9 +859,24 @@ function renderOps(){
   const box=$("#opsList"); box.replaceChildren();
   if(!list.length){ box.append(el("div",{class:"empty"},el("h3",{text:all.length?"Nothing in this view":"No requests yet"}),el("p",{text:"Requests from clients land here. Review each one, set a visit date, assign a technician and move it along."})));}
   list.forEach(r=>box.append(opsRow(r)));
+  $("#peoplePanel").hidden = !state.authMode; $("#teamPanel").hidden = !!state.authMode;
+  if (state.authMode){ renderPeople(); return; }
   const team=$("#team"); team.replaceChildren();
   if(!state.team.length) team.append(el("span",{class:"muted",style:"background:none;padding:0",text:"No technicians yet."}));
   state.team.forEach(t=>team.append(el("span",{},t,el("button",{type:"button","aria-label":"Remove "+t,onclick:()=>api.setTeam(state.team.filter(x=>x!==t)).catch(()=>toast("Couldn't remove. Try again."))},"×"))));
+}
+function renderPeople(){
+  const box=$("#people"); box.replaceChildren();
+  (state.people||[]).forEach(p=>{
+    const sel=el("select",{id:"role-"+p.id,"aria-label":"Access for "+(p.full_name||"this person")});
+    Object.entries(ROLE_LABEL).forEach(([v,t])=>sel.append(el("option",{value:v,text:t})));
+    sel.value=p.role; if(p.id===state.uid) sel.disabled=true;
+    sel.addEventListener("change", async()=>{ try{ await api.setRole(p.id, sel.value); toast("Access updated"); }catch(e){ sel.value=p.role; toast("Didn't save. Try again."); } });
+    box.append(el("div",{class:"person"},
+      el("div",{style:"min-width:0"}, el("strong",{text:(p.full_name||"No name")+(p.id===state.uid?" (you)":"")}),
+        el("div",{class:"muted",style:"font-size:.85rem;overflow-wrap:anywhere",text:[p.organization,p.phone].filter(Boolean).join(" · ")})),
+      sel));
+  });
 }
 const openRows=new Set();
 function opsRow(r){
@@ -711,7 +918,7 @@ $("#teamForm").addEventListener("submit",async e=>{ e.preventDefault(); const n=
   try{ await api.setTeam([...state.team,n]); $("#t-name").value=""; toast("Added "+n); }catch(x){ toast("Couldn't add. Try again."); } });
 
 /* ---------- shell ---------- */
-const VIEWS=["home","book","requests","updates","ops"];
+const VIEWS=["home","book","requests","updates","ops","account"];
 function route(){
   const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):"home";
   VIEWS.forEach(x=>$("#v-"+x).hidden=x!==v);
@@ -720,16 +927,22 @@ function route(){
 }
 function renderShell(){
   $("#opsTab").hidden = !state.isAdmin && state.mode!=="loading";
-  $("#who").textContent = state.isAdmin ? "Office view" : "";
+  $("#acctTab").hidden = !state.authMode;
+  if (state.authMode){
+    $("#acctLabel").textContent = state.signedIn ? "Account" : "Sign in";
+    $("#who").textContent = state.signedIn ? (state.me?.full_name || "") + (state.isAdmin ? " · Office" : state.isStaff ? " · Technician" : "") : "";
+  } else $("#who").textContent = state.isAdmin ? "Office view" : "";
   const b=$("#modeBanner");
-  if(state.mode==="local"){ b.hidden=false; $("#modeText").textContent="Demo mode: data is saved on this device only. Once hosted with a shared database, clients, technicians and the office will see the same records."; }
+  if(state.mode==="offline"){ b.hidden=false; $("#modeText").textContent="Can't reach the Nictech database right now. Check your internet connection; the app updates when it's back."; }
+  else if(state.mode==="local"){ b.hidden=false; $("#modeText").textContent="Demo mode: data is saved on this device only. Once hosted with a shared database, clients, technicians and the office will see the same records."; }
   else if(state.mode==="slow"){ b.hidden=false; $("#modeText").textContent="Can't reach the shared records yet. Showing what's loaded so far; it will update when the connection returns."; }
   else b.hidden=true;
 }
-function renderAll(){ renderShell(); renderMine(); renderFeed(); renderTechSelect(); renderOps(); }
+function renderAll(){ renderShell(); renderBook(); renderAccount(); renderMine(); renderFeed(); renderTechSelect(); renderOps(); }
 listeners.add(renderAll);
 window.addEventListener("hashchange",route);
 renderServices(); route(); renderAll(); boot();
+try{ const t=localStorage.getItem("nictech-tech"); if(t && !$("#p-tech").readOnly) $("#p-tech").value=t; }catch(_){}
 
 /* installable app when hosted on its own site */
 if ("serviceWorker" in navigator && location.protocol==="https:" && !/claude|claudeusercontent/.test(location.hostname)){
