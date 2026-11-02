@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="icon" href="icon.svg">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nictech">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Book Nictech International services, request maintenance contracts and track every job.">
 <style>:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Nictech Service Desk</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -289,6 +295,7 @@ textarea{min-height:96px;resize:vertical}
         <a class="btn btn-primary" href="#book">Book a service</a>
         <a class="btn btn-ghost" href="#plans" data-scroll="plans">See maintenance plans</a>
         <a class="btn btn-ghost" href="#updates" style="border-color:var(--orange);color:var(--orange)">Workers: post today's work</a>
+        <button class="btn btn-ghost installBtn" type="button" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg>Install the app</button>
       </div>
       <div class="creds" aria-label="Accreditations">
         <span class="cred">CFESA accredited</span><span class="cred">Universal EPA</span><span class="cred">Certified HVAC/R</span><span class="cred">Genuine OEM parts</span>
@@ -590,7 +597,7 @@ function contactLinks(phone,email){
 }
 const fmtDT = t => new Date(t).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const pill = s => el("span",{class:"pill s-"+s, text:STATUS[s]||s});
-function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2600); }
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,Math.max(2600,msg.length*70)); }
 const newRef = () => "NT-" + (Date.now().toString(36).slice(-3) + Math.random().toString(36).slice(2,4)).toUpperCase();
 const isContract = p => /contract/i.test(p||"");
 
@@ -1252,6 +1259,23 @@ try{ const t=localStorage.getItem("nictech-tech"); if(t && !$("#p-tech").readOnl
 if ("serviceWorker" in navigator && location.protocol==="https:" && !/claude|claudeusercontent/.test(location.hostname)){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
 }
+/* "Install the app" button: Android / Chrome / Edge get the real install prompt; iPhone gets the steps */
+(() => {
+  const btns = [...document.querySelectorAll(".installBtn")];
+  const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const hosted = location.protocol==="https:" && !/claude|claudeusercontent/.test(location.hostname);
+  if (installed || !hosted) return;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  let deferred = null;
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; btns.forEach(b => b.hidden = false); });
+  window.addEventListener("appinstalled", () => { deferred = null; btns.forEach(b => b.hidden = true); toast("Nictech is installed. Open it from your home screen."); });
+  if (isIOS) btns.forEach(b => b.hidden = false);
+  btns.forEach(b => b.addEventListener("click", async () => {
+    if (deferred){ deferred.prompt(); const r = await deferred.userChoice; if (r.outcome !== "accepted") toast("You can install it any time from this button."); deferred = null; return; }
+    if (isIOS){ toast("In Safari: tap the Share button, then “Add to Home Screen”."); return; }
+    toast("Open your browser menu (⋮) and choose “Install app” or “Add to Home screen”.");
+  }));
+})();
 })();
 </script>
 
