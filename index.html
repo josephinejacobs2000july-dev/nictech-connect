@@ -335,7 +335,7 @@ textarea{min-height:96px;resize:vertical}
         <div class="line"><span>Phone</span><span class="val">+231 777 580 590</span><span class="acts"><a class="btn btn-primary btn-sm" href="tel:+231777580590">Call</a><button class="btn btn-ghost btn-sm" data-copy="+231777580590">Copy</button></span></div>
         <div class="line"><span>Phone</span><span class="val">+231 886 580 590</span><span class="acts"><a class="btn btn-primary btn-sm" href="tel:+231886580590">Call</a><button class="btn btn-ghost btn-sm" data-copy="+231886580590">Copy</button></span></div>
         <div class="line"><span>WhatsApp</span><span class="val">+231 777 580 590</span><span class="acts"><a class="btn btn-primary btn-sm" href="https://wa.me/231777580590?text=Hello%20Nictech%2C%20I%20would%20like%20to%20ask%20about%20your%20services." target="_blank" rel="noopener">Chat</a><button class="btn btn-ghost btn-sm" data-copy="+231777580590">Copy</button></span></div>
-        <div class="line"><span>Email</span><span class="val">NicholassmcCauley@gmail.com</span><span class="acts"><a class="btn btn-primary btn-sm" href="mailto:NicholassmcCauley@gmail.com?subject=Service%20enquiry">Email</a><button class="btn btn-ghost btn-sm" data-copy="NicholassmcCauley@gmail.com">Copy</button></span></div>
+        <div class="line"><span>Email</span><span class="val">NicholassmcCauley@gmail.com</span><span class="acts"><a class="btn btn-primary btn-sm" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=NicholassmcCauley@gmail.com&amp;su=Service%20enquiry" target="_blank" rel="noopener">Gmail</a><a class="btn btn-ghost btn-sm" href="mailto:NicholassmcCauley@gmail.com?subject=Service%20enquiry">Email app</a><button class="btn btn-ghost btn-sm" data-copy="NicholassmcCauley@gmail.com">Copy</button></span></div>
         <div class="line"><span>Office</span><span>Baptist Seminary, RIA Highway, Monrovia</span></div>
       </div>
       <p class="hint" style="margin-top:10px">We accept referrals.</p>
@@ -558,10 +558,13 @@ function copyText(v){
   try{ if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(v).then(()=>toast("Copied "+v), fallback); return; } }catch(_){}
   fallback();
 }
+const validEmail = e => !!e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const gmailLink = (to, subject="", body="") => "https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(to)+(subject?"&su="+encodeURIComponent(subject):"")+(body?"&body="+encodeURIComponent(body):"");
+const mailtoLink = (to, subject="", body="") => "mailto:"+encodeURIComponent(to).replace("%40","@")+((subject||body)?"?"+[subject?"subject="+encodeURIComponent(subject):"", body?"body="+encodeURIComponent(body):""].filter(Boolean).join("&"):"");
 function contactLinks(phone,email){
   const d=phoneDigits(phone); const out=[];
   if(d.length>=7){ out.push(el("a",{class:"btn btn-ghost btn-sm",href:"tel:+"+d},"Call")); out.push(el("a",{class:"btn btn-ghost btn-sm",href:"https://wa.me/"+d,target:"_blank",rel:"noopener"},"WhatsApp")); }
-  if(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) out.push(el("a",{class:"btn btn-ghost btn-sm",href:"mailto:"+encodeURIComponent(email).replace("%40","@")},"Email"));
+  if(validEmail(email)){ out.push(el("a",{class:"btn btn-ghost btn-sm",href:gmailLink(email),target:"_blank",rel:"noopener"},"Gmail")); out.push(el("a",{class:"btn btn-ghost btn-sm",href:mailtoLink(email)},"Email app")); }
   if(phone) out.push(el("button",{class:"btn btn-ghost btn-sm",type:"button",onclick:()=>copyText(String(phone).trim())},"Copy phone"));
   if(email) out.push(el("button",{class:"btn btn-ghost btn-sm",type:"button",onclick:()=>copyText(String(email).trim())},"Copy email"));
   return out.length ? el("div",{class:"contact-links"},out) : null;
@@ -1062,7 +1065,7 @@ function clientMessage(r){
 function notifyBox(r){
   const d=phoneDigits(r.phone), m=clientMessage(r), links=[];
   if (d.length>=7) links.push(el("a",{class:"btn btn-ghost btn-sm",href:"https://wa.me/"+d+"?text="+encodeURIComponent(m.text),target:"_blank",rel:"noopener"},"Send on WhatsApp"));
-  if (r.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email)) links.push(el("a",{class:"btn btn-ghost btn-sm",href:"mailto:"+encodeURIComponent(r.email).replace("%40","@")+"?subject="+encodeURIComponent(m.subject)+"&body="+encodeURIComponent(m.text)},"Send by email"));
+  if (validEmail(r.email)){ links.push(el("a",{class:"btn btn-ghost btn-sm",href:gmailLink(r.email,m.subject,m.text),target:"_blank",rel:"noopener"},"Send by Gmail")); links.push(el("a",{class:"btn btn-ghost btn-sm",href:mailtoLink(r.email,m.subject,m.text)},"Send by email app")); }
   if (!links.length) return null;
   return el("div",{class:"notify"},
     el("div",{class:"eyebrow",style:"color:var(--muted)",text:"Notify the client · "+(STATUS[r.status]||"")}),
