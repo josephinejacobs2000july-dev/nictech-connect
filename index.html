@@ -297,6 +297,7 @@ textarea{min-height:96px;resize:vertical}
         <a class="btn btn-ghost" href="#updates" style="border-color:var(--orange);color:var(--orange)">Workers: post today's work</a>
         <button class="btn btn-ghost installBtn" type="button" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg>Install the app</button>
       </div>
+      <div class="notice" id="installHelp" hidden style="margin-top:14px;max-width:560px"></div>
       <div class="creds" aria-label="Accreditations">
         <span class="cred">CFESA accredited</span><span class="cred">Universal EPA</span><span class="cred">Certified HVAC/R</span><span class="cred">Genuine OEM parts</span>
       </div>
@@ -1259,21 +1260,34 @@ try{ const t=localStorage.getItem("nictech-tech"); if(t && !$("#p-tech").readOnl
 if ("serviceWorker" in navigator && location.protocol==="https:" && !/claude|claudeusercontent/.test(location.hostname)){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
 }
-/* "Install the app" button: Android / Chrome / Edge get the real install prompt; iPhone gets the steps */
+/* "Install the app" button: one-tap install where the browser allows it, otherwise the steps for that device */
 (() => {
   const btns = [...document.querySelectorAll(".installBtn")];
+  const help = $("#installHelp");
   const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const hosted = location.protocol==="https:" && !/claude|claudeusercontent/.test(location.hostname);
   if (installed || !hosted) return;
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  const ua = navigator.userAgent;
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  const isAndroid = /android/i.test(ua);
+  const isSamsung = /samsungbrowser/i.test(ua);
+  const isEdge = /edg\//i.test(ua);
   let deferred = null;
-  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; btns.forEach(b => b.hidden = false); });
-  window.addEventListener("appinstalled", () => { deferred = null; btns.forEach(b => b.hidden = true); toast("Nictech is installed. Open it from your home screen."); });
-  if (isIOS) btns.forEach(b => b.hidden = false);
+  btns.forEach(b => b.hidden = false);
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; });
+  window.addEventListener("appinstalled", () => { deferred = null; btns.forEach(b => b.hidden = true); help.hidden = true; toast("Nictech is installed. Open it from your home screen."); });
+  const steps = () => isIOS ? "On iPhone: open this page in Safari, tap the Share button (square with an arrow), then “Add to Home Screen”, then “Add”."
+    : isSamsung ? "In Samsung Internet: tap the menu (≡) at the bottom, then “Add page to” and “Home screen”."
+    : isAndroid ? "In Chrome: tap the menu (⋮) at the top right, then “Install app” or “Add to Home screen”, then “Install”."
+    : isEdge ? "In Edge: click the menu (…) at the top right, then “Apps” and “Install this site as an app”. Or click the small install icon at the right end of the address bar."
+    : "In Chrome: click the small install icon at the right end of the address bar, or open the menu (⋮) and choose “Cast, save and share” then “Install page as app”.";
   btns.forEach(b => b.addEventListener("click", async () => {
-    if (deferred){ deferred.prompt(); const r = await deferred.userChoice; if (r.outcome !== "accepted") toast("You can install it any time from this button."); deferred = null; return; }
-    if (isIOS){ toast("In Safari: tap the Share button, then “Add to Home Screen”."); return; }
-    toast("Open your browser menu (⋮) and choose “Install app” or “Add to Home screen”.");
+    if (deferred){
+      const d = deferred; deferred = null;
+      try { d.prompt(); const r = await d.userChoice; if (r.outcome === "accepted") return; } catch(_){}
+    }
+    help.textContent = steps(); help.hidden = false;
+    help.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }));
 })();
 })();
