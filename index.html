@@ -218,6 +218,25 @@ textarea{min-height:96px;resize:vertical}
 .stars button{background:none;border:0;font-size:1.4rem;cursor:pointer;color:var(--line);padding:0 2px}
 .stars button.on{color:var(--orange)}
 .notice{background:var(--orange-soft);border-radius:10px;padding:12px 14px;font-size:.92rem}
+.contracts{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));margin-top:12px}
+.contract{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px}
+.contract .next{font-family:var(--f-display);font-stretch:115%;font-size:1.3rem;font-weight:800;color:var(--green)}
+.doc-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pay{font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px}
+.pay-unpaid{background:var(--warn-soft);color:var(--warn)}
+.pay-paid{background:var(--ok-soft);color:var(--ok)}
+.notify{background:var(--surface-2);border-radius:10px;padding:12px;display:grid;gap:8px}
+#printArea{display:none}
+@media print{
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block!important;color:#000;background:#fff;font-family:var(--f-body);padding:0}
+  #printArea h1{font-family:var(--f-display);font-size:22pt;margin:0}
+  #printArea table{width:100%;border-collapse:collapse;margin:10pt 0;font-size:10.5pt}
+  #printArea td,#printArea th{border-bottom:1px solid #ccc;padding:5pt 4pt;text-align:left;vertical-align:top}
+  #printArea .bar{height:6pt;background:repeating-linear-gradient(-45deg,#d9661c 0 8pt,#fff 8pt 16pt);margin:8pt 0 14pt}
+  #printArea .muted{color:#555}
+  @page{margin:16mm}
+}
 .person{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .person:last-child{border-bottom:0}
 .person select{width:auto;min-width:130px}
@@ -466,10 +485,28 @@ textarea{min-height:96px;resize:vertical}
       <p class="muted" id="acctRoleNote" style="font-size:.92rem"></p>
       <div><button class="btn btn-ghost" type="button" id="outBtn">Sign out</button></div>
     </div>
+    <div class="split" style="margin-top:20px;max-width:980px">
+      <form id="profForm" class="panel" style="display:grid;gap:14px;align-content:start" novalidate>
+        <h3>My profile</h3>
+        <div class="field"><label for="pf-name">Full name</label><input id="pf-name" type="text" autocomplete="name"></div>
+        <div class="field"><label for="pf-org">Organization</label><input id="pf-org" type="text" placeholder="NGO, ministry or company"></div>
+        <div class="field"><label for="pf-phone">Phone / WhatsApp</label><input id="pf-phone" type="tel" placeholder="+231 ..."></div>
+        <p id="profErr" class="notice" hidden></p>
+        <div><button class="btn btn-primary" type="submit" id="profBtn">Save profile</button></div>
+      </form>
+      <form id="pwForm" class="panel" style="display:grid;gap:14px;align-content:start" novalidate>
+        <h3>Change password</h3>
+        <div class="field"><label for="pw-new">New password</label><input id="pw-new" type="password" autocomplete="new-password"><span class="hint">At least 8 characters.</span></div>
+        <div class="field"><label for="pw-again">Type it again</label><input id="pw-again" type="password" autocomplete="new-password"></div>
+        <p id="pwErr" class="notice" hidden></p>
+        <div><button class="btn btn-primary" type="submit" id="pwBtn">Change password</button></div>
+      </form>
+    </div>
   </div>
 </div>
 
 </main>
+<div id="printArea" aria-hidden="true"></div>
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
@@ -580,7 +617,8 @@ const reqToRow = r => ({ id:r.id, org:r.org, client_type:r.clientType, services:
 const reqFromRow = x => ({ id:x.id, org:x.org, clientType:x.client_type||"", services:x.services||[], plan:x.plan||"", priority:x.priority||"Routine",
   site:x.site||"", preferredDate:x.preferred_date||"", equipment:x.equipment||"", details:x.details||"", contact:x.contact||"", phone:x.phone||"",
   email:x.email||"", po:x.po||"", status:x.status, tech:x.tech||"", scheduledDate:x.scheduled_date||"", officeNote:x.office_note||"",
-  rating:x.rating||0, createdAt:Date.parse(x.created_at), updatedAt:Date.parse(x.updated_at) });
+  rating:x.rating||0, createdAt:Date.parse(x.created_at), updatedAt:Date.parse(x.updated_at),
+  invoiceAmount: x.invoice_amount==null ? "" : Number(x.invoice_amount), invoiceCurrency:x.invoice_currency||"USD", paid:!!x.paid });
 const updFromRow = x => ({ _id:x.id, tech:x.tech, service:x.service, status:x.status, site:x.site, ref:x.ref||"", hours:Number(x.hours)||0,
   work:x.work, materials:x.materials||"", next:x.next_step||"", createdAt:Date.parse(x.created_at) });
 
@@ -642,8 +680,16 @@ function supaApi(){
       if ("scheduledDate" in p) row.scheduled_date = p.scheduledDate || null;
       if ("officeNote" in p) row.office_note = p.officeNote;
       if ("rating" in p) row.rating = p.rating;
+      if ("invoiceAmount" in p) row.invoice_amount = p.invoiceAmount === "" ? null : p.invoiceAmount;
+      if ("invoiceCurrency" in p) row.invoice_currency = p.invoiceCurrency;
+      if ("paid" in p) row.paid = p.paid;
       const { error } = await sb.from("requests").update(row).eq("id", id); if (error) fail(error); await refresh();
     },
+    async updateProfile(f){
+      const { error } = await sb.from("profiles").update({ full_name:f.name, organization:f.org, phone:f.phone }).eq("id", state.uid);
+      if (error) fail(error); await refresh();
+    },
+    async changePassword(pw){ const { error } = await sb.auth.updateUser({ password: pw }); if (error) fail(error); },
     async addUpdate(u){
       const { error } = await sb.from("work_updates").insert({ tech:u.tech, service:u.service, status:u.status, site:u.site, ref:u.ref,
         hours:u.hours, work:u.work, materials:u.materials, next_step:u.next });
@@ -740,6 +786,15 @@ function requestCard(r, owner, opts={}){
     r.officeNote ? el("p",{class:"notice"}, el("strong",{text:"From the office: "}), r.officeNote) : null,
     ups.length ? el("div",{}, el("div",{class:"eyebrow",style:"margin:6px 0",text:`Work log · ${ups.length} update${ups.length>1?"s":""}`}),
       el("div",{class:"feed",style:"margin-top:6px"}, ups.slice(0,5).map(postCard))) : null);
+  if (!opts.ops){
+    const row=el("div",{class:"doc-row"});
+    if (state.authMode) row.append(el("button",{class:"btn btn-ghost btn-sm",type:"button",onclick:()=>printJob(r)}, r.status==="done"?"Download job report":"Download job summary"));
+    if (r.invoiceAmount!=="" && r.invoiceAmount!=null){
+      row.append(el("span",{class:"muted",text:"Invoice: "+money(r.invoiceAmount,r.invoiceCurrency)}), el("span",{class:"pay "+(r.paid?"pay-paid":"pay-unpaid"),text:r.paid?"Paid":"Payment due"}));
+      if (state.authMode) row.append(el("button",{class:"btn btn-ghost btn-sm",type:"button",onclick:()=>printJob(r,{invoice:true})}, r.paid?"Download receipt":"Download invoice"));
+    }
+    if (row.childNodes.length) card.append(row);
+  }
   if (r.status==="done" && !opts.ops){
     const stars=el("div",{class:"stars",role:"group","aria-label":"Rate this job"});
     for(let i=1;i<=5;i++) stars.append(el("button",{type:"button",class:i<=(r.rating||0)?"on":"","aria-label":i+" star"+(i>1?"s":""),
@@ -754,7 +809,59 @@ function renderMine(){
   if (state.mode==="loading"){ box.append(el("div",{class:"empty"},"Loading your requests…")); return; }
   if (state.authMode && !state.signedIn){ box.append(el("div",{class:"empty"}, el("h3",{text:"Sign in to see your requests"}), el("p",{text:"Your bookings, their status and the technicians' notes appear here once you sign in."}), el("a",{class:"btn btn-primary",href:"#account",style:"margin-top:14px"},"Sign in"))); return; }
   if (!reqs.length){ box.append(el("div",{class:"empty"}, el("h3",{text:"No requests yet"}), el("p",{text:"When you book a service or request a maintenance contract, it shows up here with its status and the technicians' notes."}), el("a",{class:"btn btn-primary",href:"#book",style:"margin-top:14px"},"Book a service"))); return; }
+  const contracts = reqs.filter(r=>isContract(r.plan) && r.status!=="cancelled");
+  if (contracts.length){
+    box.append(el("div",{}, el("div",{class:"eyebrow",text:"My contracts"}),
+      el("div",{class:"contracts"}, contracts.map(r=>{
+        const next = nextVisit(r);
+        return el("div",{class:"contract"},
+          el("div",{class:"req-head"}, el("strong",{text:r.plan}), r.status==="new"?el("span",{class:"pill s-new",text:"Awaiting approval"}):el("span",{class:"pill s-done",text:"Active"})),
+          el("div",{class:"muted",style:"font-size:.9rem",text:r.services.map(s=>SVC[s]?.name||s).join(", ")+" · "+r.site}),
+          el("div",{}, el("div",{class:"muted",style:"font-size:.78rem;text-transform:uppercase;letter-spacing:.06em",text:"Next scheduled service"}),
+            el("div",{class:"next",text: next ? fmtDate(next) : "To be confirmed"})),
+          el("div",{class:"muted",style:"font-size:.85rem"}, "Ref ", el("span",{class:"mono",style:"color:var(--orange)",text:r.id}), r.tech?" · Technician: "+r.tech:""));
+      })) ));
+    box.append(el("div",{class:"eyebrow",style:"margin-top:10px",text:"All requests"}));
+  }
   reqs.forEach(r=>box.append(requestCard(r,state.uid)));
+}
+/* the visit date the office set; if it has passed on a contract, estimate the next one from the plan */
+function nextVisit(r){
+  if (!r.scheduledDate) return "";
+  const d=toDate(r.scheduledDate), today=new Date(); today.setHours(0,0,0,0);
+  if (d>=today) return r.scheduledDate;
+  const step = /monthly/i.test(r.plan)?1 : /quarterly/i.test(r.plan)?3 : /annual/i.test(r.plan)?12 : 0;
+  if (!step) return "";
+  while (d<today) d.setMonth(d.getMonth()+step);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+const money = (n,c) => (c==="LRD"?"L$":"$") + Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + " " + (c||"USD");
+/* builds a printable job report / invoice / receipt; the browser's print dialog saves it as a PDF */
+function printJob(r, opts={}){
+  const ups = jobUpdates(r.id).slice().reverse();
+  const kind = opts.invoice ? (r.paid ? "Receipt" : "Invoice") : (r.status==="done" ? "Job report" : "Job summary");
+  const tr = (k,v) => el("tr",{}, el("th",{style:"width:32%",text:k}), el("td",{text:v||"—"}));
+  const area=$("#printArea");
+  area.replaceChildren(
+    el("div",{style:"display:flex;justify-content:space-between;align-items:flex-start;gap:12pt"},
+      el("div",{}, el("h1",{text:"NICTECH INTERNATIONAL"}), el("div",{class:"muted",text:"Equipment care solution · Baptist Seminary, RIA Highway, Monrovia"}),
+        el("div",{class:"muted",text:"+231 777 580 590 · +231 886 580 590 · NicholassmcCauley@gmail.com"})),
+      el("div",{style:"text-align:right"}, el("div",{style:"font-size:16pt;font-weight:700",text:kind}), el("div",{text:"Ref "+r.id}), el("div",{class:"muted",text:"Issued "+fmtDate(Date.now())}))),
+    el("div",{class:"bar"}),
+    el("table",{}, el("tbody",{},
+      tr("Client", r.org), tr("Contact", [r.contact, r.phone, r.email].filter(Boolean).join(" · ")), tr("Site", r.site),
+      tr("Services", r.services.map(s=>SVC[s]?.name||s).join(", ")), tr("Type", r.plan), tr("Status", STATUS[r.status]||r.status),
+      tr("Technician", r.tech), tr("Visit date", r.scheduledDate?fmtDate(r.scheduledDate):""),
+      r.po?tr("PO / tender no.", r.po):null, tr("Work requested", r.details))),
+    opts.invoice ? el("table",{}, el("tbody",{},
+      tr("Amount", money(r.invoiceAmount, r.invoiceCurrency)), tr("Payment", r.paid ? "Paid in full. Thank you." : "Due on receipt")) ) : null,
+    !opts.invoice && ups.length ? el("div",{}, el("h3",{text:"Work carried out"}),
+      el("table",{}, el("thead",{}, el("tr",{}, el("th",{text:"Date"}), el("th",{text:"Technician"}), el("th",{text:"Work done"}), el("th",{text:"Parts / materials"}))),
+        el("tbody",{}, ups.map(u=>el("tr",{}, el("td",{text:fmtDT(u.createdAt)}), el("td",{text:u.tech}), el("td",{text:u.work}), el("td",{text:u.materials||"—"})))))) : null,
+    el("p",{class:"muted",style:"margin-top:18pt;font-size:9pt",text:"Nictech International · CFESA accredited · Universal EPA · Certified HVAC/R · Genuine OEM parts"}));
+  const old=document.title; document.title = `Nictech ${kind} ${r.id}`;
+  window.print();
+  setTimeout(()=>{ document.title=old; }, 500);
 }
 
 /* ---------- work log ---------- */
@@ -809,6 +916,7 @@ function renderAccount(){
   $("#acctName").textContent = m.full_name || state.email;
   const kv = (label, val) => el("div",{}, el("span",{text:label}), val||"—");
   $("#acctKv").replaceChildren(kv("Email",state.email), kv("Organization",m.organization), kv("Phone",m.phone), kv("Access",ROLE_LABEL[m.role]||"Client"));
+  if (!profDirty){ $("#pf-name").value=m.full_name||""; $("#pf-org").value=m.organization||""; $("#pf-phone").value=m.phone||""; }
   $("#acctRoleNote").textContent = m.role==="office" ? "You can review requests, assign technicians and manage people on the Office tab."
     : m.role==="worker" ? "You can post your daily work on the Daily work tab and see every job's log."
     : "You can book services and follow your jobs under My requests. Nictech staff: ask the office to change your access.";
@@ -833,6 +941,27 @@ $("#upForm").addEventListener("submit", async e=>{
     if(inNow){ toast("Account created"); location.hash="book"; }
     else { err.textContent="Account created. Check your email for a confirmation link, then sign in here."; err.hidden=false; }
   }catch(x){ err.textContent = /registered|exists/i.test(x?.message||"") ? "An account with this email already exists. Sign in instead." : (x?.message || "Couldn't create the account. Try again."); err.hidden=false; }
+  finally{ b.disabled=false; }
+});
+let profDirty=false;
+["#pf-name","#pf-org","#pf-phone"].forEach(s=>$(s).addEventListener("input",()=>profDirty=true));
+$("#profForm").addEventListener("submit", async e=>{
+  e.preventDefault(); const err=$("#profErr"); err.hidden=true;
+  const f={ name:$("#pf-name").value.trim(), org:$("#pf-org").value.trim(), phone:$("#pf-phone").value.trim() };
+  if(!f.name||!f.phone){ err.textContent="Add your full name and phone number."; err.hidden=false; return; }
+  const b=$("#profBtn"); b.disabled=true;
+  try{ await api.updateProfile(f); profDirty=false; renderAll(); toast("Profile saved"); }
+  catch(x){ err.textContent="Your profile didn't save. Check your connection and try again."; err.hidden=false; }
+  finally{ b.disabled=false; }
+});
+$("#pwForm").addEventListener("submit", async e=>{
+  e.preventDefault(); const err=$("#pwErr"); err.hidden=true;
+  const a=$("#pw-new").value, c=$("#pw-again").value;
+  if(a.length<8){ err.textContent="Use at least 8 characters."; err.hidden=false; return; }
+  if(a!==c){ err.textContent="The two passwords don't match. Type them again."; err.hidden=false; return; }
+  const b=$("#pwBtn"); b.disabled=true;
+  try{ await api.changePassword(a); $("#pw-new").value=""; $("#pw-again").value=""; toast("Password changed"); }
+  catch(x){ err.textContent = /different|same/i.test(x?.message||"") ? "Choose a password different from your current one." : (x?.message || "Your password didn't change. Try again."); err.hidden=false; }
   finally{ b.disabled=false; }
 });
 $("#outBtn").addEventListener("click", async ()=>{ await api.signOut(); toast("Signed out"); location.hash="home"; });
@@ -898,6 +1027,35 @@ function renderPeople(){
       sel));
   });
 }
+/* one-tap client messages: opens WhatsApp or the email app with the message written; the office presses Send */
+function clientMessage(r){
+  const name = (r.contact||"").split(" ")[0] || "there";
+  const track = location.origin + location.pathname + "#requests";
+  const when = r.scheduledDate ? fmtDate(r.scheduledDate) : "";
+  const lines = {
+    new:       `we've received your request ${r.id} and will confirm a date soon.`,
+    approved:  `your request ${r.id} has been approved. We'll confirm the visit date shortly.`,
+    scheduled: `your job ${r.id} is scheduled${when?" for "+when:""}${r.tech?" with our technician "+r.tech:""}.`,
+    progress:  `our team${r.tech?" ("+r.tech+")":""} is now working on your job ${r.id}.`,
+    done:      `your job ${r.id} is completed. Thank you for choosing Nictech. You can download the job report and rate our work in the app.`,
+    cancelled: `your request ${r.id} has been cancelled. Please call us if you have any questions.`,
+  };
+  let msg = `Hello ${name}, this is Nictech International: ${lines[r.status]||lines.new}`;
+  if (r.officeNote) msg += ` Note: ${r.officeNote}`;
+  if (r.invoiceAmount!=="" && r.invoiceAmount!=null && !r.paid) msg += ` Invoice: ${money(r.invoiceAmount,r.invoiceCurrency)}.`;
+  msg += ` Track it here: ${track}`;
+  return { text: msg, subject: `Nictech job ${r.id}: ${STATUS[r.status]||"Update"}` };
+}
+function notifyBox(r){
+  const d=phoneDigits(r.phone), m=clientMessage(r), links=[];
+  if (d.length>=7) links.push(el("a",{class:"btn btn-ghost btn-sm",href:"https://wa.me/"+d+"?text="+encodeURIComponent(m.text),target:"_blank",rel:"noopener"},"Send on WhatsApp"));
+  if (r.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email)) links.push(el("a",{class:"btn btn-ghost btn-sm",href:"mailto:"+encodeURIComponent(r.email).replace("%40","@")+"?subject="+encodeURIComponent(m.subject)+"&body="+encodeURIComponent(m.text)},"Send by email"));
+  if (!links.length) return null;
+  return el("div",{class:"notify"},
+    el("div",{class:"eyebrow",style:"color:var(--muted)",text:"Notify the client · "+(STATUS[r.status]||"")}),
+    el("p",{style:"font-size:.9rem",text:m.text}),
+    el("div",{class:"doc-row"},links));
+}
 const openRows=new Set(); const drafts={};
 function opsRow(r){
   const d=el("details",{class:"ops-row"}); if(openRows.has(r.id)) d.open=true;
@@ -913,6 +1071,10 @@ function opsRow(r){
   const tSel=keep("tech",el("select",{id:tid})); tSel.append(el("option",{value:"",text:"Unassigned"})); [...new Set([...state.team, r.tech, dr.tech].filter(Boolean))].forEach(t=>tSel.append(el("option",{value:t,text:t}))); tSel.value=dr.tech ?? (r.tech||"");
   const dIn=keep("date",el("input",{type:"date",id:did,value:dr.date ?? (r.scheduledDate||"")}));
   const nIn=keep("note",el("input",{type:"text",id:nid,value:dr.note ?? (r.officeNote||""),placeholder:"Shown to the client",maxlength:"1000"}));
+  const aid="am-"+r.id, cid="cu-"+r.id, pid="pd-"+r.id;
+  const aIn=keep("amount",el("input",{type:"number",id:aid,min:"0",step:"0.01",placeholder:"Not invoiced yet",value:dr.amount ?? (r.invoiceAmount===""||r.invoiceAmount==null?"":String(r.invoiceAmount))}));
+  const cSel=keep("cur",el("select",{id:cid})); [["USD","US$ (USD)"],["LRD","L$ (LRD)"]].forEach(([v,t])=>cSel.append(el("option",{value:v,text:t}))); cSel.value=dr.cur ?? (r.invoiceCurrency||"USD");
+  const pSel=keep("paid",el("select",{id:pid})); [["no","Payment due"],["yes","Paid"]].forEach(([v,t])=>pSel.append(el("option",{value:v,text:t}))); pSel.value=dr.paid ?? (r.paid?"yes":"no");
   const ups=jobUpdates(r.id);
   d.append(el("div",{class:"inner"},
     el("div",{class:"kv"},
@@ -928,11 +1090,21 @@ function opsRow(r){
       el("div",{class:"field"},el("label",{for:sid,text:"Status"}),sSel),
       el("div",{class:"field"},el("label",{for:tid,text:"Technician"}),tSel),
       el("div",{class:"field"},el("label",{for:did,text:"Visit date"}),dIn),
-      el("div",{class:"field"},el("label",{for:nid,text:"Note to client"}),nIn)),
-    el("div",{}, el("button",{class:"btn btn-primary btn-sm",type:"button",onclick:async ev=>{
+      el("div",{class:"field"},el("label",{for:nid,text:"Note to client"}),nIn),
+      el("div",{class:"field"},el("label",{for:aid,text:"Invoice amount"}),aIn),
+      el("div",{class:"field"},el("label",{for:cid,text:"Currency"}),cSel),
+      el("div",{class:"field"},el("label",{for:pid,text:"Payment"}),pSel)),
+    el("div",{class:"doc-row"}, el("button",{class:"btn btn-primary btn-sm",type:"button",onclick:async ev=>{
+      const amt=aIn.value.trim();
+      if(amt!=="" && !(Number(amt)>=0)){ toast("Enter the invoice amount as a number, or leave it empty."); return; }
       ev.target.disabled=true;
-      try{ await api.patchRequest(r._owner,r.id,{status:sSel.value,tech:tSel.value,scheduledDate:dIn.value,officeNote:nIn.value.trim(),updatedAt:Date.now()}); delete drafts[r.id]; toast(r.id+" updated"); }
-      catch(e){ toast("Didn't save. Try again."); } finally{ ev.target.disabled=false; } }},"Save changes")),
+      try{ await api.patchRequest(r._owner,r.id,{status:sSel.value,tech:tSel.value,scheduledDate:dIn.value,officeNote:nIn.value.trim(),
+             invoiceAmount: amt===""?"":Math.round(Number(amt)*100)/100, invoiceCurrency:cSel.value, paid:pSel.value==="yes", updatedAt:Date.now()});
+           delete drafts[r.id]; toast(r.id+" updated. Let the client know below."); }
+      catch(e){ toast("Didn't save. Try again."); } finally{ ev.target.disabled=false; } }},"Save changes"),
+      el("button",{class:"btn btn-ghost btn-sm",type:"button",onclick:()=>printJob(r)},"Job report"),
+      r.invoiceAmount!==""&&r.invoiceAmount!=null ? el("button",{class:"btn btn-ghost btn-sm",type:"button",onclick:()=>printJob(r,{invoice:true})}, r.paid?"Receipt":"Invoice") : null),
+    notifyBox(r),
     ups.length?el("div",{},el("div",{class:"eyebrow",style:"margin-bottom:6px",text:"Work log for this job"}),el("div",{class:"feed",style:"margin-top:0"},ups.map(postCard))):null));
   return d;
 }
