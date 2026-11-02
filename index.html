@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Nictech Service Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#2f7d1f">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: app shell — brand bar + tabs on top (bottom tab bar on phones); each tab is a work-order style view.
+   Brand: Nictech green (logo) with brochure orange as the second voice; "job ticket" vernacular for refs and statuses. */
+:root{
+  --bg:#f4f6f1; --surface:#ffffff; --surface-2:#eaefe4; --line:#d5ddcc;
+  --fg:#18211a; --muted:#5b6758; --green:#2f7d1f; --green-ink:#ffffff; --green-soft:#e3f0dc;
+  --orange:#d9661c; --orange-soft:#fbe9dc;
+  --ok:#2f7d1f; --warn:#b7791f; --crit:#c2412d; --info:#2b6cb0;
+  --ok-soft:#e3f0dc; --warn-soft:#fbf0d9; --crit-soft:#f9e1dc; --info-soft:#dfeaf6;
+  --shadow:0 1px 2px rgba(24,33,26,.06),0 6px 20px rgba(24,33,26,.06);
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111611; --surface:#192019; --surface-2:#202920; --line:#2e3a2d;
+  --fg:#e8eee4; --muted:#9aa896; --green:#6cc04a; --green-ink:#0e170c; --green-soft:#1f3319;
+  --orange:#f08a45; --orange-soft:#3a2416;
+  --ok:#6cc04a; --warn:#e3a94a; --crit:#ef7a63; --info:#6aa8e8;
+  --ok-soft:#1f3319; --warn-soft:#382c14; --crit-soft:#3b1d17; --info-soft:#17283b;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111611; --surface:#192019; --surface-2:#202920; --line:#2e3a2d;
+  --fg:#e8eee4; --muted:#9aa896; --green:#6cc04a; --green-ink:#0e170c; --green-soft:#1f3319;
+  --orange:#f08a45; --orange-soft:#3a2416;
+  --ok:#6cc04a; --warn:#e3a94a; --crit:#ef7a63; --info:#6aa8e8;
+  --ok-soft:#1f3319; --warn-soft:#382c14; --crit-soft:#3b1d17; --info-soft:#17283b;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-body);font-size:16px;line-height:1.5;padding-bottom:84px}
+@media (min-width:820px){body{padding-bottom:0}}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3{font-family:var(--f-display);font-stretch:112%;line-height:1.1;margin:0;text-wrap:balance}
+h2{font-size:clamp(1.5rem,3.4vw,2rem);font-weight:800}
+h3{font-size:1.1rem;font-weight:700}
+p{margin:0}
+a{color:var(--green)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.eyebrow{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);font-weight:700}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:16px;min-height:60px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fg)}
+.brand b{font-family:var(--f-display);font-stretch:125%;font-weight:800;font-size:1.15rem;letter-spacing:.02em}
+.brand small{display:block;font-family:var(--f-mono);font-size:.62rem;letter-spacing:.14em;color:var(--orange);text-transform:uppercase;margin-top:-2px}
+.mark{width:34px;height:34px;flex:none}
+.tabs{display:flex;gap:4px;margin-left:auto}
+.tabs a{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:600;font-size:.95rem}
+.tabs a[aria-current="page"]{color:var(--green);background:var(--green-soft)}
+.tabs svg{width:18px;height:18px}
+@media (max-width:819px){
+  .tabs{position:fixed;left:0;right:0;bottom:0;margin:0;background:var(--surface);border-top:1px solid var(--line);justify-content:space-around;z-index:9;
+    padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+  .tabs a{flex-direction:column;gap:2px;font-size:.7rem;padding:6px 4px;flex:1;text-align:center}
+}
+.who{font-size:.8rem;color:var(--muted);white-space:nowrap}
+@media (max-width:819px){.who{margin-left:auto}}
+
+.banner{background:var(--warn-soft);color:var(--fg);font-size:.9rem}
+.banner .wrap{padding-block:8px}
+
+main{padding-block:28px 48px}
+section+section{margin-top:44px}
+.view[hidden]{display:none!important}
+
+/* buttons & fields */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:10px;padding:11px 18px;font-weight:700;cursor:pointer;text-decoration:none;font-size:.98rem}
+.btn-primary{background:var(--green);color:var(--green-ink)}
+.btn-primary:hover{filter:brightness(1.07)}
+.btn-ghost{background:transparent;border-color:var(--line);color:var(--fg)}
+.btn-ghost:hover{background:var(--surface-2)}
+.btn-sm{padding:6px 12px;font-size:.88rem;border-radius:8px}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+label{display:block;font-weight:600;font-size:.92rem;margin-bottom:6px}
+.field{display:flex;flex-direction:column;min-width:0}
+.hint{font-size:.82rem;color:var(--muted);margin-top:4px}
+input[type=text],input[type=tel],input[type=email],input[type=date],input[type=number],select,textarea{
+  width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:1rem}
+textarea{min-height:96px;resize:vertical}
+.grid2{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.chip span{display:inline-block;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:.9rem;background:var(--surface)}
+.chip input:checked+span{background:var(--green);color:var(--green-ink);border-color:var(--green)}
+.chip input:focus-visible+span{outline:3px solid var(--orange);outline-offset:2px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+@media (min-width:820px){.toast{bottom:24px}}
+
+/* home */
+.hero{display:grid;gap:28px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:center}
+@media (max-width:819px){.hero{grid-template-columns:1fr}}
+.hero h1{font-size:clamp(2rem,5.6vw,3.6rem);font-weight:800;font-stretch:118%}
+.hero h1 em{font-style:normal;color:var(--green)}
+.hero p.lead{font-size:1.12rem;color:var(--muted);max-width:56ch;margin-top:14px}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.creds{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.cred{font-family:var(--f-mono);font-size:.75rem;letter-spacing:.06em;border:1px solid var(--line);border-radius:6px;padding:5px 9px;background:var(--surface)}
+.ticket{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.ticket .tape{height:10px;background:repeating-linear-gradient(-45deg,var(--orange) 0 12px,transparent 12px 24px)}
+.ticket .body{padding:18px 20px;display:grid;gap:12px}
+.ticket .row{display:flex;justify-content:space-between;gap:12px;font-size:.92rem;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.ticket .row:last-child{border:0;padding:0}
+.ticket .row span:first-child{color:var(--muted)}
+.ticket .row span:last-child{text-align:right}
+
+.services{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));margin-top:20px}
+.svc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.svc .ico{width:38px;height:38px;border-radius:10px;background:var(--green-soft);color:var(--green);display:grid;place-items:center}
+.svc .ico svg{width:22px;height:22px}
+.svc p{color:var(--muted);font-size:.93rem}
+.svc button{margin-top:auto;align-self:flex-start;background:none;border:0;padding:0;color:var(--green);font-weight:700;cursor:pointer}
+
+.plans{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));margin-top:20px}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.plan.feature{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
+.plan .freq{font-family:var(--f-mono);font-size:.78rem;color:var(--orange);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.plan ul{margin:4px 0 0;padding-left:18px;color:var(--muted);font-size:.93rem}
+
+.split{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.why{display:grid;gap:12px}
+.why div{display:flex;gap:12px;align-items:flex-start}
+.why b{font-family:var(--f-mono);color:var(--orange);min-width:2ch}
+.contact .line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.contact .line:last-child{border:0}
+.contact .val{font-family:var(--f-mono);font-size:.95rem;user-select:all;overflow-wrap:anywhere}
+.resp{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:.95rem;margin-top:10px}
+
+/* status */
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.s-new{background:var(--info-soft);color:var(--info)}
+.s-approved,.s-scheduled{background:var(--warn-soft);color:var(--warn)}
+.s-progress{background:var(--orange-soft);color:var(--orange)}
+.s-done{background:var(--ok-soft);color:var(--ok)}
+.s-cancelled{background:var(--surface-2);color:var(--muted)}
+.s-crit{background:var(--crit-soft);color:var(--crit)}
+.prio-emergency{color:var(--crit);font-weight:700}
+
+.steps{display:flex;gap:0;margin:14px 0 4px;overflow-x:auto}
+.steps li{list-style:none;flex:1;min-width:76px;text-align:center;font-size:.74rem;color:var(--muted);position:relative;padding-top:20px}
+.steps li::before{content:"";position:absolute;top:5px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--surface);border:2px solid var(--line);z-index:1}
+.steps li::after{content:"";position:absolute;top:10px;left:-50%;width:100%;height:2px;background:var(--line)}
+.steps li:first-child::after{display:none}
+.steps li.on{color:var(--fg);font-weight:600}
+.steps li.on::before{background:var(--green);border-color:var(--green)}
+.steps li.on::after{background:var(--green)}
+.steps{padding:0}
+
+.card-list{display:grid;gap:14px;margin-top:16px}
+.req{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px}
+.req-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.ref{font-family:var(--f-mono);font-weight:700;font-size:.92rem;color:var(--orange)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:6px 18px;font-size:.92rem}
+.kv span{color:var(--muted);display:block;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);background:var(--surface)}
+.empty h3{color:var(--fg);margin-bottom:6px}
+
+/* updates feed */
+.feed{display:grid;gap:12px;margin-top:16px}
+.post{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px;border-left:4px solid var(--line)}
+.post.st-done{border-left-color:var(--ok)}
+.post.st-track{border-left-color:var(--info)}
+.post.st-parts{border-left-color:var(--warn)}
+.post.st-delayed{border-left-color:var(--crit)}
+.post-head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.post-head strong{font-size:1rem}
+.post .meta{font-size:.82rem;color:var(--muted)}
+.post p{white-space:pre-wrap;overflow-wrap:anywhere}
+.tag{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--surface-2)}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.filters select{width:auto;min-width:160px}
+.two-col{display:grid;gap:22px;grid-template-columns:minmax(0,380px) minmax(0,1fr);align-items:start}
+@media (max-width:899px){.two-col{grid-template-columns:1fr}}
+.sticky{position:sticky;top:calc(76px + env(safe-area-inset-top,0px))}
+@media (max-width:899px){.sticky{position:static}}
+
+/* ops */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px;margin-top:16px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat b{display:block;font-family:var(--f-display);font-stretch:120%;font-size:1.9rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.85rem;color:var(--muted)}
+.stat.alert b{color:var(--crit)}
+.ops-row{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.ops-row summary{list-style:none;cursor:pointer;padding:14px 16px;display:grid;gap:6px 14px;grid-template-columns:auto minmax(0,1fr) auto;align-items:center}
+.ops-row summary::-webkit-details-marker{display:none}
+.ops-row summary .who-line{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:600px){.ops-row summary{grid-template-columns:1fr auto}.ops-row summary .who-line{grid-column:1/-1;grid-row:2;white-space:normal}}
+.ops-row .inner{padding:0 16px 16px;display:grid;gap:14px;border-top:1px solid var(--line);padding-top:14px}
+.team{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.team span{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border-radius:999px;padding:5px 6px 5px 12px;font-size:.9rem}
+.team button{border:0;background:var(--surface);border-radius:50%;width:22px;height:22px;cursor:pointer;line-height:1}
+.stars{display:flex;gap:4px}
+.stars button{background:none;border:0;font-size:1.4rem;cursor:pointer;color:var(--line);padding:0 2px}
+.stars button.on{color:var(--orange)}
+.notice{background:var(--orange-soft);border-radius:10px;padding:12px 14px;font-size:.92rem}
+.success{background:var(--green-soft);border:1px solid var(--green);border-radius:14px;padding:22px;display:grid;gap:10px}
+.success .bigref{font-family:var(--f-mono);font-size:1.6rem;font-weight:700;color:var(--green)}
+@media (prefers-reduced-motion:no-preference){.view{animation:in .25s ease}@keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
+</style>
+</head>
+<body>
+
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#home" aria-label="Nictech International home">
+      <svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2 36 10v20L20 38 4 30V10Z" fill="var(--green)"/><path d="M12 28V12l16 16V12" stroke="var(--green-ink)" stroke-width="3.4" fill="none" stroke-linejoin="round"/></svg>
+      <span><b>NICTECH</b><small>Equipment care solution</small></span>
+    </a>
+    <nav class="tabs" aria-label="Main">
+      <a href="#home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Home</a>
+      <a href="#book"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M12 13v5M9.5 15.5h5"/></svg>Book</a>
+      <a href="#requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>My requests</a>
+      <a href="#updates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 6a4 4 0 0 0-5 5l-6 6 3 3 6-6a4 4 0 0 0 5-5l-2 2-3-1-1-3z"/></svg>Work log</a>
+      <a href="#ops" id="opsTab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Office</a>
+    </nav>
+    <span class="who" id="who"></span>
+  </div>
+</header>
+<div class="banner" id="modeBanner" hidden><div class="wrap" id="modeText"></div></div>
+
+<main class="wrap">
+
+<!-- HOME -->
+<div class="view" id="v-home">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Equipment Solution Center · Monrovia</div>
+      <h1 style="margin-top:10px">Planned maintenance that keeps your <em>equipment running.</em></h1>
+      <p class="lead">Nictech International installs, repairs and services HVAC/R systems, elevators, electrical, plumbing, IT and CCTV for NGOs, government offices, businesses and homes. Book a one-off job or put your site on a maintenance contract.</p>
+      <div class="ctas">
+        <a class="btn btn-primary" href="#book">Book a service</a>
+        <a class="btn btn-ghost" href="#plans" data-scroll="plans">See maintenance plans</a>
+      </div>
+      <div class="creds" aria-label="Accreditations">
+        <span class="cred">CFESA accredited</span><span class="cred">Universal EPA</span><span class="cred">Certified HVAC/R</span><span class="cred">Genuine OEM parts</span>
+      </div>
+    </div>
+    <div class="ticket" aria-label="Example work order">
+      <div class="tape"></div>
+      <div class="body">
+        <div class="row"><span class="eyebrow" style="color:var(--muted)">Example work order</span><span class="pill s-progress">In progress</span></div>
+        <div class="row"><span>Ref</span><span class="mono" style="color:var(--orange);font-weight:700">NT-7Q4K2</span></div>
+        <div class="row"><span>Service</span><span>Preventive maintenance · split AC units</span></div>
+        <div class="row"><span>Client type</span><span>NGO field office</span></div>
+        <div class="row"><span>Plan</span><span>Quarterly contract</span></div>
+        <div class="row"><span>Today's log</span><span>Condenser coils cleaned, gas pressure checked</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">What we do</div>
+    <h2 style="margin-top:6px">Services</h2>
+    <div class="services" id="svcGrid"></div>
+  </section>
+
+  <section id="plans">
+    <div class="eyebrow">Contracts for organizations</div>
+    <h2 style="margin-top:6px">Maintenance plans</h2>
+    <p class="muted" style="margin-top:8px;max-width:62ch">Most of our NGO and government clients keep their equipment on a planned maintenance contract. We visit on schedule, log every job, and you can follow each visit in the app.</p>
+    <div class="plans">
+      <div class="plan"><span class="freq">One-time</span><h3>Single job</h3><p class="muted">A repair, installation or inspection, quoted per job.</p><ul><li>Site assessment</li><li>Written quote</li><li>Work report on completion</li></ul><a class="btn btn-ghost btn-sm" href="#book" data-plan="One-time job" style="margin-top:auto;align-self:flex-start">Book</a></div>
+      <div class="plan"><span class="freq">Monthly</span><h3>Monthly service</h3><p class="muted">For busy sites with equipment that runs every day.</p><ul><li>Scheduled monthly visit</li><li>Priority call-outs</li><li>Monthly service report</li></ul><a class="btn btn-ghost btn-sm" href="#book" data-plan="Monthly contract" style="margin-top:auto;align-self:flex-start">Request</a></div>
+      <div class="plan feature"><span class="freq">Quarterly</span><h3>Quarterly service</h3><p class="muted">The common choice for offices and field stations.</p><ul><li>Visit every three months</li><li>Coil cleaning and checks</li><li>Equipment register kept for you</li></ul><a class="btn btn-primary btn-sm" href="#book" data-plan="Quarterly contract" style="margin-top:auto;align-self:flex-start">Request</a></div>
+      <div class="plan"><span class="freq">Annual</span><h3>Annual preventive plan</h3><p class="muted">A full year of planned maintenance, set out up front.</p><ul><li>Agreed visit calendar</li><li>Genuine OEM parts</li><li>Year-end equipment report</li></ul><a class="btn btn-ghost btn-sm" href="#book" data-plan="Annual maintenance contract" style="margin-top:auto;align-self:flex-start">Request</a></div>
+    </div>
+  </section>
+
+  <section class="split">
+    <div class="panel">
+      <div class="eyebrow">Why choose Nictech</div>
+      <h2 style="margin-top:6px;font-size:1.5rem">Nobody does planned maintenance like Nictech.</h2>
+      <div class="why" style="margin-top:16px">
+        <div><b>1</b><p><strong>Original factory (OEM) parts</strong> on every repair.</p></div>
+        <div><b>2</b><p><strong>Durability.</strong> Work done to industry standards so it lasts.</p></div>
+        <div><b>3</b><p><strong>Performance.</strong> Clean coils and tuned systems run better and cost less.</p></div>
+        <div><b>4</b><p><strong>Efficiency.</strong> Experienced crews and competitive pricing.</p></div>
+      </div>
+      <div class="eyebrow" style="margin-top:22px">Target response times</div>
+      <div class="resp"><span class="prio-emergency">Emergency</span><span>Same day</span><span style="color:var(--warn);font-weight:700">Urgent</span><span>Within 48 hours</span><span style="font-weight:700">Routine</span><span>Scheduled with you</span></div>
+    </div>
+    <div class="panel contact">
+      <div class="eyebrow">Contact</div>
+      <h2 style="margin-top:6px;font-size:1.5rem">Talk to the office</h2>
+      <div style="margin-top:12px">
+        <div class="line"><span>Phone</span><span class="val">+231 777 580 590</span><button class="btn btn-ghost btn-sm" data-copy="+231777580590">Copy</button></div>
+        <div class="line"><span>Phone</span><span class="val">+231 886 580 590</span><button class="btn btn-ghost btn-sm" data-copy="+231886580590">Copy</button></div>
+        <div class="line"><span>WhatsApp</span><span class="val">+1 443 525 5707</span><button class="btn btn-ghost btn-sm" data-copy="+14435255707">Copy</button></div>
+        <div class="line"><span>Email</span><span class="val">NicholassmcCauley@gmail.com</span><button class="btn btn-ghost btn-sm" data-copy="NicholassmcCauley@gmail.com">Copy</button></div>
+        <div class="line"><span>Office</span><span>Baptist Seminary, RIA Highway, Monrovia</span></div>
+      </div>
+      <p class="hint" style="margin-top:10px">We accept referrals.</p>
+    </div>
+  </section>
+</div>
+
+<!-- BOOK -->
+<div class="view" id="v-book" hidden>
+  <div class="eyebrow">Service request</div>
+  <h2 style="margin-top:6px">Book a service or request a contract</h2>
+  <p class="muted" style="margin-top:8px;max-width:62ch">Tell us what needs attention. The office reviews every request, confirms a date, and assigns a technician. You can follow progress under My requests.</p>
+  <div id="bookDone" hidden style="margin-top:20px"></div>
+  <form id="bookForm" class="panel" style="margin-top:20px;display:grid;gap:18px" novalidate>
+    <div class="grid2">
+      <div class="field"><label for="b-org">Organization or name</label><input id="b-org" type="text" required placeholder="e.g. Ministry of Health, Central Office"></div>
+      <div class="field"><label for="b-type">Client type</label><select id="b-type"><option>NGO</option><option>Government</option><option>Business</option><option>Hotel / restaurant</option><option>Residential</option></select></div>
+    </div>
+    <div class="field"><label>Services needed</label><div class="chips" id="b-svcs"></div></div>
+    <div class="grid2">
+      <div class="field"><label for="b-plan">Request type</label><select id="b-plan"><option>One-time job</option><option>Monthly contract</option><option>Quarterly contract</option><option>Annual maintenance contract</option><option>Installation project</option></select></div>
+      <div class="field"><label for="b-prio">Priority</label><select id="b-prio"><option>Routine</option><option>Urgent</option><option>Emergency</option></select><span class="hint">Emergency: equipment down or a safety risk.</span></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="b-site">Site location</label><input id="b-site" type="text" required placeholder="Building, street, community"></div>
+      <div class="field"><label for="b-date">Preferred date</label><input id="b-date" type="date"></div>
+    </div>
+    <div class="field"><label for="b-equip">Equipment on site</label><input id="b-equip" type="text" placeholder="e.g. 6 split ACs, 1 passenger elevator, 2 walk-in coolers"></div>
+    <div class="field"><label for="b-details">What is the problem or scope of work?</label><textarea id="b-details" required placeholder="Describe the fault, or what you want covered by the contract"></textarea></div>
+    <div class="grid2">
+      <div class="field"><label for="b-contact">Contact person</label><input id="b-contact" type="text" required></div>
+      <div class="field"><label for="b-phone">Phone / WhatsApp</label><input id="b-phone" type="tel" required placeholder="+231 ..."></div>
+      <div class="field"><label for="b-email">Email (optional)</label><input id="b-email" type="email"></div>
+      <div class="field"><label for="b-po">Purchase order / tender no. (optional)</label><input id="b-po" type="text"></div>
+    </div>
+    <p id="bookErr" class="notice" hidden></p>
+    <div><button class="btn btn-primary" type="submit" id="bookBtn">Send request</button></div>
+  </form>
+</div>
+
+<!-- MY REQUESTS -->
+<div class="view" id="v-requests" hidden>
+  <div class="eyebrow">Track your jobs</div>
+  <h2 style="margin-top:6px">My requests</h2>
+  <p class="muted" style="margin-top:8px">Status, assigned technician and the technicians' daily notes for each of your jobs.</p>
+  <div class="card-list" id="myList"></div>
+</div>
+
+<!-- WORK LOG -->
+<div class="view" id="v-updates" hidden>
+  <div class="eyebrow">Field reports</div>
+  <h2 style="margin-top:6px">Daily work log</h2>
+  <p class="muted" style="margin-top:8px;max-width:62ch">Technicians post what they did on site each day. Clients see updates on their own jobs; the office sees everything.</p>
+  <div class="two-col" style="margin-top:20px">
+    <form id="postForm" class="panel sticky" style="display:grid;gap:14px" novalidate>
+      <h3>Post today's work</h3>
+      <div class="field"><label for="p-tech">Technician</label><select id="p-tech"></select><span class="hint" id="p-techHint"></span></div>
+      <div class="grid2" style="grid-template-columns:1fr 1fr">
+        <div class="field"><label for="p-svc">Service</label><select id="p-svc"></select></div>
+        <div class="field"><label for="p-status">Status</label><select id="p-status"><option value="track">On track</option><option value="done">Job completed</option><option value="parts">Waiting on parts</option><option value="delayed">Delayed</option></select></div>
+      </div>
+      <div class="field"><label for="p-site">Site / client</label><input id="p-site" type="text" required placeholder="e.g. UNICEF office, Mamba Point"></div>
+      <div class="grid2" style="grid-template-columns:1fr 1fr">
+        <div class="field"><label for="p-ref">Job ref</label><input id="p-ref" type="text" class="mono" placeholder="NT-…"></div>
+        <div class="field"><label for="p-hours">Hours on site</label><input id="p-hours" type="number" min="0" max="24" step="0.5" value="4"></div>
+      </div>
+      <div class="field"><label for="p-work">Work done</label><textarea id="p-work" required placeholder="What you did today"></textarea></div>
+      <div class="field"><label for="p-mat">Parts / materials used</label><input id="p-mat" type="text" placeholder="e.g. 2 capacitors, R410A refrigerant"></div>
+      <div class="field"><label for="p-next">Next step</label><input id="p-next" type="text" placeholder="e.g. Return Thursday to fit compressor"></div>
+      <p id="postErr" class="notice" hidden></p>
+      <button class="btn btn-primary" type="submit" id="postBtn">Post update</button>
+    </form>
+    <div style="min-width:0">
+      <div class="filters">
+        <select id="f-svc" aria-label="Filter by service"><option value="">All services</option></select>
+        <select id="f-status" aria-label="Filter by status"><option value="">All statuses</option><option value="track">On track</option><option value="done">Completed</option><option value="parts">Waiting on parts</option><option value="delayed">Delayed</option></select>
+        <span class="muted" id="feedCount" style="font-size:.9rem"></span>
+      </div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </div>
+</div>
+
+<!-- OFFICE -->
+<div class="view" id="v-ops" hidden>
+  <div class="eyebrow">Office dashboard</div>
+  <h2 style="margin-top:6px">Requests and contracts</h2>
+  <div id="opsLocked" class="empty" style="margin-top:20px" hidden><h3>Office staff only</h3><p>Only Nictech office staff can review and assign requests. Clients can follow their own jobs under My requests.</p></div>
+  <div id="opsBody">
+    <div class="stats" id="stats"></div>
+    <div class="filters" style="margin-top:20px">
+      <select id="o-status" aria-label="Filter requests"><option value="open">Open requests</option><option value="">All requests</option><option value="new">New</option><option value="approved">Approved</option><option value="scheduled">Scheduled</option><option value="progress">In progress</option><option value="done">Completed</option><option value="cancelled">Cancelled</option></select>
+      <select id="o-kind" aria-label="Filter by type"><option value="">Jobs and contracts</option><option value="contract">Contracts only</option><option value="job">One-time jobs only</option></select>
+    </div>
+    <div class="card-list" id="opsList"></div>
+    <div class="panel" style="margin-top:28px">
+      <h3>Technicians</h3>
+      <p class="muted" style="font-size:.92rem;margin-top:4px">Names here appear in the assign list and the work log.</p>
+      <div class="team" id="team"></div>
+      <form id="teamForm" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <input id="t-name" type="text" placeholder="Technician name and trade" style="flex:1;min-width:200px">
+        <button class="btn btn-primary btn-sm" type="submit">Add</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+const SERVICES = [
+  {id:"hvac", name:"Air conditioning & HVAC/R", desc:"Installation, repair and maintenance of split, window, ducted and industrial units.", icon:'<path d="M3 8h18M3 12h18M7 16h10"/><path d="M12 3v2M12 19v2"/>'},
+  {id:"refrig", name:"Commercial refrigeration & cold rooms", desc:"Cold storage installation, walk-in coolers, chillers and boilers.", icon:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M5 10h14M9 6v2M9 13v3"/>'},
+  {id:"kitchen", name:"Commercial kitchen & laundry", desc:"Hot-side kitchen equipment, washers and dryers for hotels and institutions.", icon:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M8 6h.01M11 6h.01"/>'},
+  {id:"elevator", name:"Elevator repair & maintenance", desc:"Residential and commercial lifts, serviced with safety first.", icon:'<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M12 3v18M9 9l-1.5 2h3zM15 11l1.5-2h-3z"/>'},
+  {id:"electrical", name:"Electrical", desc:"Industrial, commercial and residential wiring, panels and fault finding.", icon:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'},
+  {id:"plumbing", name:"Plumbing, drainage & hot water", desc:"Water lines, drain clearing, sanitary fixtures and hot water systems.", icon:'<path d="M4 4h6v6h6v4"/><path d="M14 14h6v6h-6z"/><path d="M4 10h6"/>'},
+  {id:"it", name:"IT & CCTV", desc:"Computer and printer repair, networks, and CCTV for offices, homes and warehouses.", icon:'<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/>'},
+  {id:"fumigation", name:"Fumigation", desc:"Safe, effective pest control for homes, offices and facilities.", icon:'<path d="M4 20c3-6 6-6 8-10s5-6 8-6"/><circle cx="7" cy="8" r="1.5"/><circle cx="17" cy="15" r="1.5"/>'},
+  {id:"sanitation", name:"Sanitation & janitorial", desc:"Scheduled cleaning teams for commercial and residential properties.", icon:'<path d="M8 3h8l-1 6H9z"/><path d="M6 9h12l-1 12H7z"/>'},
+  {id:"construction", name:"Construction", desc:"Residential, commercial and industrial building work.", icon:'<path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M10 21v-6h4v6"/>'},
+  {id:"logistics", name:"Logistics", desc:"Moving equipment and materials to and between your sites.", icon:'<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>'},
+];
+const SVC = Object.fromEntries(SERVICES.map(s=>[s.id,s]));
+const STATUS = {new:"New",approved:"Approved",scheduled:"Scheduled",progress:"In progress",done:"Completed",cancelled:"Cancelled"};
+const FLOW = ["new","approved","scheduled","progress","done"];
+const POST_ST = {track:"On track",done:"Job completed",parts:"Waiting on parts",delayed:"Delayed"};
+
+const $ = s => document.querySelector(s);
+function el(tag, attrs={}, ...kids){
+  const n = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})){
+    if (v==null || v===false) continue;
+    if (k==="class") n.className=v; else if (k==="text") n.textContent=v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2),v); else n.setAttribute(k,v===true?"":v);
+  }
+  for (const k of kids.flat()) if (k!=null && k!==false) n.append(k.nodeType?k:document.createTextNode(String(k)));
+  return n;
+}
+function icon(svgInner){ const s=document.createElementNS("http://www.w3.org/2000/svg","svg"); s.setAttribute("viewBox","0 0 24 24"); s.setAttribute("fill","none"); s.setAttribute("stroke","currentColor"); s.setAttribute("stroke-width","2"); s.setAttribute("stroke-linecap","round"); s.setAttribute("stroke-linejoin","round"); s.innerHTML=svgInner; return s; }
+const fmtDate = t => t ? new Date(t).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}) : "—";
+const fmtDT = t => new Date(t).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+const pill = s => el("span",{class:"pill s-"+s, text:STATUS[s]||s});
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2600); }
+const newRef = () => "NT-" + (Date.now().toString(36).slice(-3) + Math.random().toString(36).slice(2,4)).toUpperCase();
+const isContract = p => /contract/i.test(p||"");
+
+/* ---------- data layer: shared cloud store when available, else this-device storage ---------- */
+const state = { uid:null, isAdmin:false, canWrite:true, mode:"loading", bookings:{}, mine:null, updates:[], team:[] };
+const listeners = new Set(); const emit = () => listeners.forEach(f=>f());
+let api = null;
+
+function localApi(){
+  const K="nictech-local-v1";
+  let data; try{ data=JSON.parse(localStorage.getItem(K)||"null"); }catch(e){}
+  data = data || {bookings:{}, updates:[], team:[]};
+  const save=()=>{ try{ localStorage.setItem(K,JSON.stringify(data)); }catch(e){} };
+  const me="local-user";
+  const push=()=>{ state.bookings=data.bookings; state.mine=data.bookings[me]||null; state.updates=[...data.updates].sort((a,b)=>b.createdAt-a.createdAt); state.team=data.team; emit(); };
+  return {
+    start(){ state.uid=me; state.isAdmin=true; state.canWrite=true; push(); },
+    async addRequest(r){ const doc=data.bookings[me]||(data.bookings[me]={owner:me,requests:{}}); doc.requests[r.id]=r; save(); push(); },
+    async patchRequest(owner,id,patch){ Object.assign(data.bookings[owner].requests[id],patch); save(); push(); },
+    async addUpdate(u){ data.updates.push({...u,_id:"u"+Date.now()}); save(); push(); },
+    async setTeam(list){ data.team=list; save(); push(); },
+  };
+}
+
+function cloudApi(db, user){
+  return {
+    async start(){
+      state.uid = await user.id();
+      state.isAdmin = await user.canEdit();
+      const cw = await user.can("data.write"); state.canWrite = cw!==false;
+      const timer=setTimeout(()=>{ if(state.mode==="loading"){ state.mode="slow"; emit(); }},10000);
+      const done=()=>{ clearTimeout(timer); if(state.mode!=="cloud"){ state.mode="cloud"; emit(); } };
+      db.collection("updates").orderBy("createdAt","desc").limit(200).onSnapshot(s=>{ state.updates=s.docs.map(d=>({...d.data(),_id:d.id})); if(!s.metadata.fromCache) done(); emit(); }, ()=>done());
+      db.doc("config/team").onSnapshot(s=>{ state.team=(s.exists&&s.data().technicians)||[]; emit(); }, ()=>{});
+      if (state.isAdmin){
+        db.collection("bookings").onSnapshot(s=>{ const o={}; s.docs.forEach(d=>o[d.id]=d.data()); state.bookings=o; state.mine=o[state.uid]||null; emit(); }, ()=>{});
+      } else if (state.uid){
+        db.doc("bookings/"+state.uid).onSnapshot(s=>{ state.mine=s.exists?s.data():null; emit(); }, ()=>{});
+      }
+    },
+    async addRequest(r){
+      if(!state.uid) throw {code:"no_id"};
+      const ref=db.doc("bookings/"+state.uid);
+      if (state.mine) await ref.update({requests:{[r.id]:r}});
+      else await ref.set({owner:state.uid, requests:{[r.id]:r}});
+    },
+    async patchRequest(owner,id,patch){ await db.doc("bookings/"+owner).update({requests:{[id]:patch}}); },
+    async addUpdate(u){ await db.collection("updates").add({...u, author:state.uid}); },
+    async setTeam(list){ await db.doc("config/team").set({technicians:list}); },
+  };
+}
+
+async function boot(){
+  let db=null, user=null;
+  try{ if (window.claude && claude.use){ [db,user] = await Promise.all([claude.use("db"), claude.use("user")]); } }catch(e){}
+  if (db && user){ api=cloudApi(db,user); await api.start(); if(state.mode==="loading") emit(); }
+  else { api=localApi(); state.mode="local"; api.start(); }
+  emit();
+}
+
+/* ---------- static pieces ---------- */
+function renderServices(){
+  const g=$("#svcGrid"); g.replaceChildren();
+  SERVICES.forEach(s=>g.append(el("div",{class:"svc"},
+    el("div",{class:"ico"},icon(s.icon)), el("h3",{text:s.name}), el("p",{text:s.desc}),
+    el("button",{type:"button",onclick:()=>{ preselect(s.id); location.hash="book"; }}, "Book this →"))));
+  const chips=$("#b-svcs"); chips.replaceChildren();
+  SERVICES.forEach(s=>chips.append(el("label",{class:"chip"},el("input",{type:"checkbox",value:s.id,id:"svc-"+s.id}),el("span",{text:s.name}))));
+  const ps=$("#p-svc"), fs=$("#f-svc");
+  SERVICES.forEach(s=>{ ps.append(el("option",{value:s.id,text:s.name})); fs.append(el("option",{value:s.id,text:s.name})); });
+}
+function preselect(id){ const c=$("#svc-"+id); if(c) c.checked=true; }
+
+document.addEventListener("click",e=>{
+  const c=e.target.closest("[data-copy]");
+  if(c){ const v=c.dataset.copy; navigator.clipboard?.writeText(v).then(()=>toast("Copied "+v),()=>toast(v)) ?? toast(v); }
+  const p=e.target.closest("[data-plan]"); if(p){ $("#b-plan").value=p.dataset.plan; }
+  const sc=e.target.closest("[data-scroll]"); if(sc){ e.preventDefault(); document.getElementById(sc.dataset.scroll)?.scrollIntoView({behavior:"smooth"}); }
+});
+
+/* ---------- booking ---------- */
+$("#bookForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const err=$("#bookErr"); err.hidden=true;
+  const v=id=>$(id).value.trim();
+  const svcs=[...document.querySelectorAll("#b-svcs input:checked")].map(i=>i.value);
+  const missing=[];
+  if(!v("#b-org")) missing.push("organization"); if(!svcs.length) missing.push("at least one service");
+  if(!v("#b-site")) missing.push("site location"); if(!v("#b-details")) missing.push("problem or scope");
+  if(!v("#b-contact")) missing.push("contact person"); if(!v("#b-phone")) missing.push("phone number");
+  if(missing.length){ err.textContent="Please add: "+missing.join(", ")+"."; err.hidden=false; return; }
+  const r={ id:newRef(), org:v("#b-org"), clientType:v("#b-type"), services:svcs, plan:v("#b-plan"), priority:v("#b-prio"),
+    site:v("#b-site"), preferredDate:v("#b-date"), equipment:v("#b-equip"), details:v("#b-details"),
+    contact:v("#b-contact"), phone:v("#b-phone"), email:v("#b-email"), po:v("#b-po"),
+    status:"new", tech:"", scheduledDate:"", officeNote:"", rating:0, createdAt:Date.now(), updatedAt:Date.now() };
+  const btn=$("#bookBtn"); btn.disabled=true; btn.textContent="Sending…";
+  try{
+    await api.addRequest(r);
+    $("#bookForm").reset(); $("#bookForm").hidden=true;
+    const box=$("#bookDone"); box.hidden=false;
+    box.replaceChildren(el("div",{class:"success"},
+      el("div",{class:"eyebrow",text:"Request received"}), el("div",{class:"bigref",text:r.id}),
+      el("p",{text:`The office will review your ${r.plan.toLowerCase()} request and confirm a date. Keep this reference for calls and WhatsApp messages.`}),
+      el("div",{class:"ctas",style:"display:flex;gap:10px;flex-wrap:wrap"},
+        el("a",{class:"btn btn-primary",href:"#requests"},"Track this request"),
+        el("button",{class:"btn btn-ghost",type:"button",onclick:()=>{ box.hidden=true; $("#bookForm").hidden=false; }},"Book another"))));
+  }catch(x){
+    err.textContent = x&&x.code==="invalid_argument" ? "You can view this page but not send requests from this account. Ask Nictech to give you Contributor access, or call the office." :
+      x&&x.code==="no_id" ? "Sign in to claude.ai to send a request, or call the office on +231 777 580 590." :
+      "The request didn't send. Check your connection and try again.";
+    err.hidden=false;
+  }finally{ btn.disabled=false; btn.textContent="Send request"; }
+});
+
+/* ---------- my requests ---------- */
+function jobUpdates(ref){ return state.updates.filter(u=>(u.ref||"").toUpperCase()===ref); }
+function steps(status){
+  const idx=FLOW.indexOf(status);
+  return el("ol",{class:"steps"}, FLOW.map((s,i)=>el("li",{class:i<=idx?"on":""},STATUS[s])));
+}
+function requestCard(r, owner, opts={}){
+  const ups=jobUpdates(r.id);
+  const card=el("article",{class:"req"},
+    el("div",{class:"req-head"}, el("div",{style:"display:flex;gap:10px;align-items:center;flex-wrap:wrap"}, el("span",{class:"ref",text:r.id}), el("strong",{text:r.org})), pill(r.status)),
+    r.status!=="cancelled" ? steps(r.status) : null,
+    el("div",{class:"kv"},
+      el("div",{},el("span",{text:"Type"}), r.plan),
+      el("div",{},el("span",{text:"Services"}), r.services.map(s=>SVC[s]?.name||s).join(", ")),
+      el("div",{},el("span",{text:"Site"}), r.site),
+      el("div",{},el("span",{text:"Technician"}), r.tech||"Not yet assigned"),
+      el("div",{},el("span",{text:"Visit date"}), r.scheduledDate?fmtDate(r.scheduledDate):(r.preferredDate?"Requested "+fmtDate(r.preferredDate):"To be confirmed")),
+      el("div",{},el("span",{text:"Priority"}), el("span",{class:r.priority==="Emergency"?"prio-emergency":"",style:"text-transform:none;letter-spacing:0;font-size:inherit;color:inherit;display:inline",text:r.priority}))),
+    r.officeNote ? el("p",{class:"notice"}, el("strong",{text:"From the office: "}), r.officeNote) : null,
+    ups.length ? el("div",{}, el("div",{class:"eyebrow",style:"margin:6px 0",text:`Work log · ${ups.length} update${ups.length>1?"s":""}`}),
+      el("div",{class:"feed",style:"margin-top:6px"}, ups.slice(0,5).map(postCard))) : null);
+  if (r.status==="done" && !opts.ops){
+    const stars=el("div",{class:"stars",role:"group","aria-label":"Rate this job"});
+    for(let i=1;i<=5;i++) stars.append(el("button",{type:"button",class:i<=(r.rating||0)?"on":"","aria-label":i+" star"+(i>1?"s":""),
+      onclick:async()=>{ try{ await api.patchRequest(owner,r.id,{rating:i}); toast("Thanks for rating this job"); }catch(e){ toast("Rating didn't save. Try again."); } }},"★"));
+    card.append(el("div",{style:"display:flex;gap:12px;align-items:center;flex-wrap:wrap"}, el("span",{class:"muted",text:"How did we do?"}), stars));
+  }
+  return card;
+}
+function renderMine(){
+  const box=$("#myList"); box.replaceChildren();
+  const reqs = state.mine ? Object.values(state.mine.requests||{}).sort((a,b)=>b.createdAt-a.createdAt) : [];
+  if (state.mode==="loading"){ box.append(el("div",{class:"empty"},"Loading your requests…")); return; }
+  if (!reqs.length){ box.append(el("div",{class:"empty"}, el("h3",{text:"No requests yet"}), el("p",{text:"When you book a service or request a maintenance contract, it shows up here with its status and the technicians' notes."}), el("a",{class:"btn btn-primary",href:"#book",style:"margin-top:14px"},"Book a service"))); return; }
+  reqs.forEach(r=>box.append(requestCard(r,state.uid)));
+}
+
+/* ---------- work log ---------- */
+function postCard(u){
+  return el("article",{class:"post st-"+u.status},
+    el("div",{class:"post-head"}, el("strong",{text:u.tech||"Technician"}), el("span",{class:"tag",text:SVC[u.service]?.name||u.service}), el("span",{class:"pill "+({done:"s-done",track:"s-new",parts:"s-approved",delayed:"s-crit"}[u.status]),text:POST_ST[u.status]})),
+    el("div",{class:"meta"}, fmtDT(u.createdAt)+" · "+u.site+(u.ref?" · ":""), u.ref?el("span",{class:"mono",style:"color:var(--orange)",text:u.ref}):null, u.hours?` · ${u.hours} h on site`:""),
+    el("p",{text:u.work}),
+    u.materials?el("div",{class:"meta"},el("strong",{text:"Materials: "}),u.materials):null,
+    u.next?el("div",{class:"meta"},el("strong",{text:"Next: "}),u.next):null);
+}
+function renderFeed(){
+  const fs=$("#f-svc").value, fst=$("#f-status").value;
+  const list=state.updates.filter(u=>(!fs||u.service===fs)&&(!fst||u.status===fst));
+  const box=$("#feed"); box.replaceChildren();
+  $("#feedCount").textContent = list.length ? `${list.length} update${list.length>1?"s":""}` : "";
+  if(state.mode==="loading"){ box.append(el("div",{class:"empty"},"Loading the work log…")); return; }
+  if(!list.length){ box.append(el("div",{class:"empty"}, el("h3",{text: state.updates.length?"No updates match these filters":"No work posted yet"}), el("p",{text:"Technicians post here at the end of each site visit: what they did, parts used and what comes next."}))); return; }
+  list.forEach(u=>box.append(postCard(u)));
+}
+function renderTechSelect(){
+  const sel=$("#p-tech"); const cur=sel.value; sel.replaceChildren();
+  if(!state.team.length){ sel.append(el("option",{value:"",text:"No technicians added yet"})); $("#p-techHint").textContent="The office adds technicians on the Office tab."; }
+  else { $("#p-techHint").textContent=""; state.team.forEach(t=>sel.append(el("option",{value:t,text:t}))); if(state.team.includes(cur)) sel.value=cur; }
+}
+$("#f-svc").addEventListener("change",renderFeed); $("#f-status").addEventListener("change",renderFeed);
+$("#postForm").addEventListener("submit",async e=>{
+  e.preventDefault(); const err=$("#postErr"); err.hidden=true;
+  const v=id=>$(id).value.trim();
+  if(!v("#p-tech")){ err.textContent="Pick your name. If it's missing, ask the office to add you."; err.hidden=false; return; }
+  if(!v("#p-site")||!v("#p-work")){ err.textContent="Add the site and what you did today."; err.hidden=false; return; }
+  const u={ tech:v("#p-tech"), service:v("#p-svc"), status:v("#p-status"), site:v("#p-site"), ref:v("#p-ref").toUpperCase(),
+    hours:Number($("#p-hours").value)||0, work:v("#p-work"), materials:v("#p-mat"), next:v("#p-next"), createdAt:Date.now() };
+  const btn=$("#postBtn"); btn.disabled=true;
+  try{ await api.addUpdate(u); ["#p-site","#p-ref","#p-work","#p-mat","#p-next"].forEach(i=>$(i).value=""); toast("Update posted"); }
+  catch(x){ err.textContent = x&&x.code==="invalid_argument" ? "This account can view the log but not post. Ask the office for Contributor access." : "The update didn't post. Check your connection and try again."; err.hidden=false; }
+  finally{ btn.disabled=false; }
+});
+
+/* ---------- office ---------- */
+function allRequests(){
+  const out=[]; for(const [owner,doc] of Object.entries(state.bookings)) for(const r of Object.values(doc.requests||{})) out.push({...r,_owner:owner});
+  return out.sort((a,b)=>{ const pa=a.priority==="Emergency"?0:a.priority==="Urgent"?1:2, pb=b.priority==="Emergency"?0:b.priority==="Urgent"?1:2; const oa=["done","cancelled"].includes(a.status), ob=["done","cancelled"].includes(b.status); return (oa-ob)||(pa-pb)||(b.createdAt-a.createdAt); });
+}
+function renderOps(){
+  $("#opsLocked").hidden = state.isAdmin; $("#opsBody").hidden = !state.isAdmin;
+  if(!state.isAdmin) return;
+  const all=allRequests(); const today=new Date().toDateString(); const month=new Date().getMonth();
+  const stat=(n,label,alert)=>el("div",{class:"stat"+(alert&&n?" alert":"")},el("b",{text:n}),el("span",{text:label}));
+  $("#stats").replaceChildren(
+    stat(all.filter(r=>r.status==="new").length,"New requests to review"),
+    stat(all.filter(r=>r.priority==="Emergency"&&!["done","cancelled"].includes(r.status)).length,"Open emergencies",true),
+    stat(all.filter(r=>["approved","scheduled","progress"].includes(r.status)).length,"Jobs in the pipeline"),
+    stat(all.filter(r=>isContract(r.plan)&&r.status!=="cancelled").length,"Contracts"),
+    stat(state.updates.filter(u=>new Date(u.createdAt).toDateString()===today).length,"Work updates today"),
+    stat(all.filter(r=>r.status==="done"&&new Date(r.updatedAt).getMonth()===month).length,"Completed this month"));
+  const fs=$("#o-status").value, fk=$("#o-kind").value;
+  const list=all.filter(r=>(fs==="open"?!["done","cancelled"].includes(r.status):!fs||r.status===fs)&&(!fk||(fk==="contract")===isContract(r.plan)));
+  const box=$("#opsList"); box.replaceChildren();
+  if(!list.length){ box.append(el("div",{class:"empty"},el("h3",{text:all.length?"Nothing in this view":"No requests yet"}),el("p",{text:"Requests from clients land here. Review each one, set a visit date, assign a technician and move it along."})));}
+  list.forEach(r=>box.append(opsRow(r)));
+  const team=$("#team"); team.replaceChildren();
+  if(!state.team.length) team.append(el("span",{class:"muted",style:"background:none;padding:0",text:"No technicians yet."}));
+  state.team.forEach(t=>team.append(el("span",{},t,el("button",{type:"button","aria-label":"Remove "+t,onclick:()=>api.setTeam(state.team.filter(x=>x!==t)).catch(()=>toast("Couldn't remove. Try again."))},"×"))));
+}
+const openRows=new Set();
+function opsRow(r){
+  const d=el("details",{class:"ops-row"}); if(openRows.has(r.id)) d.open=true;
+  d.addEventListener("toggle",()=>d.open?openRows.add(r.id):openRows.delete(r.id));
+  d.append(el("summary",{}, el("span",{class:"ref",text:r.id}),
+    el("span",{class:"who-line"}, el("strong",{text:r.org}), el("span",{class:"muted",text:` · ${r.clientType} · ${r.plan} · `}), el("span",{class:r.priority==="Emergency"?"prio-emergency":"muted",text:r.priority})),
+    pill(r.status)));
+  const sid="st-"+r.id, tid="tc-"+r.id, did="dt-"+r.id, nid="nt-"+r.id;
+  const sSel=el("select",{id:sid}); Object.entries(STATUS).forEach(([k,v])=>sSel.append(el("option",{value:k,text:v}))); sSel.value=r.status;
+  const tSel=el("select",{id:tid}); tSel.append(el("option",{value:"",text:"Unassigned"})); [...new Set([...state.team, r.tech].filter(Boolean))].forEach(t=>tSel.append(el("option",{value:t,text:t}))); tSel.value=r.tech||"";
+  const dIn=el("input",{type:"date",id:did,value:r.scheduledDate||""});
+  const nIn=el("input",{type:"text",id:nid,value:r.officeNote||"",placeholder:"Shown to the client"});
+  const ups=jobUpdates(r.id);
+  d.append(el("div",{class:"inner"},
+    el("div",{class:"kv"},
+      el("div",{},el("span",{text:"Services"}),r.services.map(s=>SVC[s]?.name||s).join(", ")),
+      el("div",{},el("span",{text:"Site"}),r.site),
+      el("div",{},el("span",{text:"Contact"}),`${r.contact} · ${r.phone}`, r.email?el("br"):null, r.email||null),
+      el("div",{},el("span",{text:"Requested"}),fmtDate(r.createdAt)+(r.preferredDate?" · wants "+fmtDate(r.preferredDate):"")),
+      r.equipment?el("div",{},el("span",{text:"Equipment"}),r.equipment):null,
+      r.po?el("div",{},el("span",{text:"PO / tender"}),r.po):null,
+      r.rating?el("div",{},el("span",{text:"Client rating"}),"★".repeat(r.rating)):null),
+    el("p",{style:"white-space:pre-wrap",text:r.details}),
+    el("div",{class:"grid2"},
+      el("div",{class:"field"},el("label",{for:sid,text:"Status"}),sSel),
+      el("div",{class:"field"},el("label",{for:tid,text:"Technician"}),tSel),
+      el("div",{class:"field"},el("label",{for:did,text:"Visit date"}),dIn),
+      el("div",{class:"field"},el("label",{for:nid,text:"Note to client"}),nIn)),
+    el("div",{}, el("button",{class:"btn btn-primary btn-sm",type:"button",onclick:async ev=>{
+      ev.target.disabled=true;
+      try{ await api.patchRequest(r._owner,r.id,{status:sSel.value,tech:tSel.value,scheduledDate:dIn.value,officeNote:nIn.value.trim(),updatedAt:Date.now()}); toast(r.id+" updated"); }
+      catch(e){ toast("Didn't save. Try again."); } finally{ ev.target.disabled=false; } }},"Save changes")),
+    ups.length?el("div",{},el("div",{class:"eyebrow",style:"margin-bottom:6px",text:"Work log for this job"}),el("div",{class:"feed",style:"margin-top:0"},ups.map(postCard))):null));
+  return d;
+}
+$("#o-status").addEventListener("change",renderOps); $("#o-kind").addEventListener("change",renderOps);
+$("#teamForm").addEventListener("submit",async e=>{ e.preventDefault(); const n=$("#t-name").value.trim(); if(!n||state.team.includes(n)) return;
+  try{ await api.setTeam([...state.team,n]); $("#t-name").value=""; toast("Added "+n); }catch(x){ toast("Couldn't add. Try again."); } });
+
+/* ---------- shell ---------- */
+const VIEWS=["home","book","requests","updates","ops"];
+function route(){
+  const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):"home";
+  VIEWS.forEach(x=>$("#v-"+x).hidden=x!==v);
+  document.querySelectorAll(".tabs a").forEach(a=>a.getAttribute("href")==="#"+v?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
+  if(location.hash) window.scrollTo(0,0);
+}
+function renderShell(){
+  $("#opsTab").hidden = !state.isAdmin && state.mode!=="loading";
+  $("#who").textContent = state.isAdmin ? "Office view" : "";
+  const b=$("#modeBanner");
+  if(state.mode==="local"){ b.hidden=false; $("#modeText").textContent="Demo mode: data is saved on this device only. Once hosted with a shared database, clients, technicians and the office will see the same records."; }
+  else if(state.mode==="slow"){ b.hidden=false; $("#modeText").textContent="Can't reach the shared records yet. Showing what's loaded so far; it will update when the connection returns."; }
+  else b.hidden=true;
+}
+function renderAll(){ renderShell(); renderMine(); renderFeed(); renderTechSelect(); renderOps(); }
+listeners.add(renderAll);
+window.addEventListener("hashchange",route);
+renderServices(); route(); renderAll(); boot();
+
+/* installable app when hosted on its own site */
+if ("serviceWorker" in navigator && location.protocol==="https:" && !/claude|claudeusercontent/.test(location.hostname)){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+})();
+</script>
+
+</body>
+</html>
