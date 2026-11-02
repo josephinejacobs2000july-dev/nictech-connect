@@ -144,7 +144,10 @@ textarea{min-height:96px;resize:vertical}
 .why b{font-family:var(--f-mono);color:var(--orange);min-width:2ch}
 .contact .line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .contact .line:last-child{border:0}
-.contact .val{font-family:var(--f-mono);font-size:.95rem;user-select:all;overflow-wrap:anywhere}
+.contact .val{font-family:var(--f-mono);font-size:.95rem;overflow-wrap:anywhere;color:var(--fg);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.contact .val:hover{text-decoration-color:var(--green)}
+.contact .acts{display:flex;gap:6px}
+.contact-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .resp{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:.95rem;margin-top:10px}
 
 /* status */
@@ -311,10 +314,10 @@ textarea{min-height:96px;resize:vertical}
       <div class="eyebrow">Contact</div>
       <h2 style="margin-top:6px;font-size:1.5rem">Talk to the office</h2>
       <div style="margin-top:12px">
-        <div class="line"><span>Phone</span><span class="val">+231 777 580 590</span><button class="btn btn-ghost btn-sm" data-copy="+231777580590">Copy</button></div>
-        <div class="line"><span>Phone</span><span class="val">+231 886 580 590</span><button class="btn btn-ghost btn-sm" data-copy="+231886580590">Copy</button></div>
-        <div class="line"><span>WhatsApp</span><span class="val">+1 443 525 5707</span><button class="btn btn-ghost btn-sm" data-copy="+14435255707">Copy</button></div>
-        <div class="line"><span>Email</span><span class="val">NicholassmcCauley@gmail.com</span><button class="btn btn-ghost btn-sm" data-copy="NicholassmcCauley@gmail.com">Copy</button></div>
+        <div class="line"><span>Phone</span><a class="val" href="tel:+231777580590">+231 777 580 590</a><span class="acts"><a class="btn btn-primary btn-sm" href="tel:+231777580590">Call</a><button class="btn btn-ghost btn-sm" data-copy="+231777580590">Copy</button></span></div>
+        <div class="line"><span>Phone</span><a class="val" href="tel:+231886580590">+231 886 580 590</a><span class="acts"><a class="btn btn-primary btn-sm" href="tel:+231886580590">Call</a><button class="btn btn-ghost btn-sm" data-copy="+231886580590">Copy</button></span></div>
+        <div class="line"><span>WhatsApp</span><a class="val" href="https://wa.me/14435255707" target="_blank" rel="noopener">+1 443 525 5707</a><span class="acts"><a class="btn btn-primary btn-sm" href="https://wa.me/14435255707?text=Hello%20Nictech%2C%20I%20would%20like%20to%20ask%20about%20your%20services." target="_blank" rel="noopener">Chat</a><button class="btn btn-ghost btn-sm" data-copy="+14435255707">Copy</button></span></div>
+        <div class="line"><span>Email</span><a class="val" href="mailto:NicholassmcCauley@gmail.com?subject=Service%20enquiry">NicholassmcCauley@gmail.com</a><span class="acts"><a class="btn btn-primary btn-sm" href="mailto:NicholassmcCauley@gmail.com?subject=Service%20enquiry">Email</a><button class="btn btn-ghost btn-sm" data-copy="NicholassmcCauley@gmail.com">Copy</button></span></div>
         <div class="line"><span>Office</span><span>Baptist Seminary, RIA Highway, Monrovia</span></div>
       </div>
       <p class="hint" style="margin-top:10px">We accept referrals.</p>
@@ -502,7 +505,17 @@ function el(tag, attrs={}, ...kids){
   return n;
 }
 function icon(svgInner){ const s=document.createElementNS("http://www.w3.org/2000/svg","svg"); s.setAttribute("viewBox","0 0 24 24"); s.setAttribute("fill","none"); s.setAttribute("stroke","currentColor"); s.setAttribute("stroke-width","2"); s.setAttribute("stroke-linecap","round"); s.setAttribute("stroke-linejoin","round"); s.innerHTML=svgInner; return s; }
-const fmtDate = t => t ? new Date(t).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}) : "—";
+/* "2026-11-05" is read as a local date (not UTC midnight), so it never shows as the day before */
+const toDate = t => typeof t==="string" && /^\d{4}-\d{2}-\d{2}$/.test(t) ? new Date(+t.slice(0,4), +t.slice(5,7)-1, +t.slice(8,10)) : new Date(t);
+const fmtDate = t => t ? toDate(t).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}) : "—";
+/* phone numbers typed by clients -> call and WhatsApp links; local Liberian numbers (0777…) get +231 */
+function phoneDigits(p){ let d=String(p||"").replace(/[^\d+]/g,""); if(d.startsWith("+")) return d.slice(1); if(d.startsWith("00")) return d.slice(2); if(d.startsWith("0")) return "231"+d.slice(1); return d; }
+function contactLinks(phone,email){
+  const d=phoneDigits(phone); const out=[];
+  if(d.length>=7){ out.push(el("a",{class:"btn btn-ghost btn-sm",href:"tel:+"+d},"Call")); out.push(el("a",{class:"btn btn-ghost btn-sm",href:"https://wa.me/"+d,target:"_blank",rel:"noopener"},"WhatsApp")); }
+  if(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) out.push(el("a",{class:"btn btn-ghost btn-sm",href:"mailto:"+encodeURIComponent(email).replace("%40","@")},"Email"));
+  return out.length ? el("div",{class:"contact-links"},out) : null;
+}
 const fmtDT = t => new Date(t).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
 const pill = s => el("span",{class:"pill s-"+s, text:STATUS[s]||s});
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2600); }
@@ -700,6 +713,7 @@ $("#bookForm").addEventListener("submit", async e=>{
   }catch(x){
     err.textContent = x&&x.code==="invalid_argument" ? "You can view this page but not send requests from this account. Ask Nictech to give you Contributor access, or call the office." :
       x&&x.code==="no_id" ? "Sign in to claude.ai to send a request, or call the office on +231 777 580 590." :
+      /too many requests/i.test(x?.message||"") ? "You've sent the most requests allowed for one day. Call the office on +231 777 580 590 for anything urgent." :
       "The request didn't send. Check your connection and try again.";
     err.hidden=false;
   }finally{ btn.disabled=false; btn.textContent="Send request"; }
@@ -842,10 +856,16 @@ function allRequests(){
   const out=[]; for(const [owner,doc] of Object.entries(state.bookings)) for(const r of Object.values(doc.requests||{})) out.push({...r,_owner:owner});
   return out.sort((a,b)=>{ const pa=a.priority==="Emergency"?0:a.priority==="Urgent"?1:2, pb=b.priority==="Emergency"?0:b.priority==="Urgent"?1:2; const oa=["done","cancelled"].includes(a.status), ob=["done","cancelled"].includes(b.status); return (oa-ob)||(pa-pb)||(b.createdAt-a.createdAt); });
 }
+let opsPending=false;
 function renderOps(){
   $("#opsLocked").hidden = state.isAdmin; $("#opsBody").hidden = !state.isAdmin;
   if(!state.isAdmin) return;
-  const all=allRequests(); const today=new Date().toDateString(); const month=new Date().getMonth();
+  /* don't rebuild the list under the office's cursor; catch up when they leave the field */
+  const ae=document.activeElement;
+  if (ae && $("#opsList").contains(ae) && /INPUT|SELECT|TEXTAREA/.test(ae.tagName)){ opsPending=true; return; }
+  opsPending=false;
+  const all=allRequests(); const now=new Date(); const today=now.toDateString();
+  const thisMonth = t => { const d=new Date(t); return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); };
   const stat=(n,label,alert)=>el("div",{class:"stat"+(alert&&n?" alert":"")},el("b",{text:n}),el("span",{text:label}));
   $("#stats").replaceChildren(
     stat(all.filter(r=>r.status==="new").length,"New requests to review"),
@@ -853,7 +873,7 @@ function renderOps(){
     stat(all.filter(r=>["approved","scheduled","progress"].includes(r.status)).length,"Jobs in the pipeline"),
     stat(all.filter(r=>isContract(r.plan)&&r.status!=="cancelled").length,"Contracts"),
     stat(state.updates.filter(u=>new Date(u.createdAt).toDateString()===today).length,"Work updates today"),
-    stat(all.filter(r=>r.status==="done"&&new Date(r.updatedAt).getMonth()===month).length,"Completed this month"));
+    stat(all.filter(r=>r.status==="done"&&thisMonth(r.updatedAt)).length,"Completed this month"));
   const fs=$("#o-status").value, fk=$("#o-kind").value;
   const list=all.filter(r=>(fs==="open"?!["done","cancelled"].includes(r.status):!fs||r.status===fs)&&(!fk||(fk==="contract")===isContract(r.plan)));
   const box=$("#opsList"); box.replaceChildren();
@@ -878,7 +898,7 @@ function renderPeople(){
       sel));
   });
 }
-const openRows=new Set();
+const openRows=new Set(); const drafts={};
 function opsRow(r){
   const d=el("details",{class:"ops-row"}); if(openRows.has(r.id)) d.open=true;
   d.addEventListener("toggle",()=>d.open?openRows.add(r.id):openRows.delete(r.id));
@@ -886,16 +906,19 @@ function opsRow(r){
     el("span",{class:"who-line"}, el("strong",{text:r.org}), el("span",{class:"muted",text:` · ${r.clientType} · ${r.plan} · `}), el("span",{class:r.priority==="Emergency"?"prio-emergency":"muted",text:r.priority})),
     pill(r.status)));
   const sid="st-"+r.id, tid="tc-"+r.id, did="dt-"+r.id, nid="nt-"+r.id;
-  const sSel=el("select",{id:sid}); Object.entries(STATUS).forEach(([k,v])=>sSel.append(el("option",{value:k,text:v}))); sSel.value=r.status;
-  const tSel=el("select",{id:tid}); tSel.append(el("option",{value:"",text:"Unassigned"})); [...new Set([...state.team, r.tech].filter(Boolean))].forEach(t=>tSel.append(el("option",{value:t,text:t}))); tSel.value=r.tech||"";
-  const dIn=el("input",{type:"date",id:did,value:r.scheduledDate||""});
-  const nIn=el("input",{type:"text",id:nid,value:r.officeNote||"",placeholder:"Shown to the client"});
+  /* unsaved edits survive the live refreshes that rebuild this list */
+  const dr = drafts[r.id] || {};
+  const keep = (k, node) => { node.addEventListener("input", ()=>{ (drafts[r.id] ||= {})[k] = node.value; }); node.addEventListener("change", ()=>{ (drafts[r.id] ||= {})[k] = node.value; }); return node; };
+  const sSel=keep("status",el("select",{id:sid})); Object.entries(STATUS).forEach(([k,v])=>sSel.append(el("option",{value:k,text:v}))); sSel.value=dr.status ?? r.status;
+  const tSel=keep("tech",el("select",{id:tid})); tSel.append(el("option",{value:"",text:"Unassigned"})); [...new Set([...state.team, r.tech, dr.tech].filter(Boolean))].forEach(t=>tSel.append(el("option",{value:t,text:t}))); tSel.value=dr.tech ?? (r.tech||"");
+  const dIn=keep("date",el("input",{type:"date",id:did,value:dr.date ?? (r.scheduledDate||"")}));
+  const nIn=keep("note",el("input",{type:"text",id:nid,value:dr.note ?? (r.officeNote||""),placeholder:"Shown to the client",maxlength:"1000"}));
   const ups=jobUpdates(r.id);
   d.append(el("div",{class:"inner"},
     el("div",{class:"kv"},
       el("div",{},el("span",{text:"Services"}),r.services.map(s=>SVC[s]?.name||s).join(", ")),
       el("div",{},el("span",{text:"Site"}),r.site),
-      el("div",{},el("span",{text:"Contact"}),`${r.contact} · ${r.phone}`, r.email?el("br"):null, r.email||null),
+      el("div",{},el("span",{text:"Contact"}),`${r.contact} · ${r.phone}`, r.email?el("br"):null, r.email||null, contactLinks(r.phone,r.email)),
       el("div",{},el("span",{text:"Requested"}),fmtDate(r.createdAt)+(r.preferredDate?" · wants "+fmtDate(r.preferredDate):"")),
       r.equipment?el("div",{},el("span",{text:"Equipment"}),r.equipment):null,
       r.po?el("div",{},el("span",{text:"PO / tender"}),r.po):null,
@@ -908,11 +931,15 @@ function opsRow(r){
       el("div",{class:"field"},el("label",{for:nid,text:"Note to client"}),nIn)),
     el("div",{}, el("button",{class:"btn btn-primary btn-sm",type:"button",onclick:async ev=>{
       ev.target.disabled=true;
-      try{ await api.patchRequest(r._owner,r.id,{status:sSel.value,tech:tSel.value,scheduledDate:dIn.value,officeNote:nIn.value.trim(),updatedAt:Date.now()}); toast(r.id+" updated"); }
+      try{ await api.patchRequest(r._owner,r.id,{status:sSel.value,tech:tSel.value,scheduledDate:dIn.value,officeNote:nIn.value.trim(),updatedAt:Date.now()}); delete drafts[r.id]; toast(r.id+" updated"); }
       catch(e){ toast("Didn't save. Try again."); } finally{ ev.target.disabled=false; } }},"Save changes")),
     ups.length?el("div",{},el("div",{class:"eyebrow",style:"margin-bottom:6px",text:"Work log for this job"}),el("div",{class:"feed",style:"margin-top:0"},ups.map(postCard))):null));
   return d;
 }
+$("#opsList").addEventListener("focusout", ()=>setTimeout(()=>{ if(opsPending) renderOps(); },0));
+/* field limits match the database's limits */
+Object.entries({"#b-org":200,"#b-site":300,"#b-equip":1000,"#b-details":4000,"#b-contact":150,"#b-phone":40,"#b-email":200,"#b-po":100,
+  "#p-site":300,"#p-ref":20,"#p-work":4000,"#p-mat":1000,"#p-next":1000,"#up-name":150,"#up-org":200,"#up-phone":40}).forEach(([s,n])=>{ const i=$(s); if(i) i.maxLength=n; });
 $("#o-status").addEventListener("change",renderOps); $("#o-kind").addEventListener("change",renderOps);
 $("#teamForm").addEventListener("submit",async e=>{ e.preventDefault(); const n=$("#t-name").value.trim(); if(!n||state.team.includes(n)) return;
   try{ await api.setTeam([...state.team,n]); $("#t-name").value=""; toast("Added "+n); }catch(x){ toast("Couldn't add. Try again."); } });
