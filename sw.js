@@ -1,5 +1,5 @@
 // Nictech Service Desk: offline shell cache
-const CACHE = "nictech-v6";
+const CACHE = "nictech-v7";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", e => {
@@ -17,8 +17,12 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   if (new URL(e.request.url).origin !== location.origin) return; // database and fonts go straight to the network
+  // pages and the app files are re-checked with GitHub every time, so updates show on the next refresh
+  const fresh = e.request.mode === "navigate" || /\.(html|js|json)$|\/$/.test(new URL(e.request.url).pathname)
+    ? fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" })
+    : fetch(e.request);
   e.respondWith(
-    fetch(e.request)
+    fresh
       .then(res => {
         if (res.ok && new URL(e.request.url).origin === location.origin) {
           const copy = res.clone();
