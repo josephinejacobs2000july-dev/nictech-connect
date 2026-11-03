@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="Book Nictech International services, request maintenance contracts and track every job.">
 <style>:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Nictech Service Desk</title>
+<title>Nictech International</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#2f7d1f">
 <link rel="manifest" href="manifest.json">
@@ -66,7 +66,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
 .top .wrap{display:flex;align-items:center;gap:16px;min-height:60px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fg)}
-.brand b{font-family:var(--f-display);font-stretch:125%;font-weight:800;font-size:1.15rem;letter-spacing:.02em}
+.brand b{font-family:var(--f-display);font-stretch:125%;font-weight:800;font-size:1.15rem;letter-spacing:.02em;white-space:nowrap}
+.brand b em{font-style:normal;color:var(--green)}
+@media (max-width:480px){.brand b{font-size:.98rem}.brand b em{font-size:.82em}}
 .brand small{display:block;font-family:var(--f-mono);font-size:.62rem;letter-spacing:.14em;color:var(--orange);text-transform:uppercase;margin-top:-2px}
 .mark{width:34px;height:34px;flex:none}
 .tabs{display:flex;gap:4px;margin-left:auto}
@@ -268,7 +270,7 @@ textarea{min-height:96px;resize:vertical}
   <div class="wrap">
     <a class="brand" href="#home" aria-label="Nictech International home">
       <svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2 36 10v20L20 38 4 30V10Z" fill="var(--green)"/><path d="M12 28V12l16 16V12" stroke="var(--green-ink)" stroke-width="3.4" fill="none" stroke-linejoin="round"/></svg>
-      <span><b>NICTECH</b><small>Equipment care solution</small></span>
+      <span><b>NICTECH <em>INTERNATIONAL</em></b><small>Equipment care solution</small></span>
     </a>
     <nav class="tabs" aria-label="Main">
       <a href="#home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Home</a>
