@@ -2,7 +2,7 @@
 
 Nictech International service app: book services and maintenance contracts, track jobs, and post daily work logs.
 
-Live app: https://josephinejacobs2000july-dev.github.io/nictech-connect/
+Live app: https://nictech-connect.vercel.app/
 
 ## What's inside
 - `index.html` – the whole app (Home, Book, My requests, Daily work, Office, Account)
